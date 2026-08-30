@@ -59,6 +59,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
+from qiskit.circuit import QuantumCircuit
 from qiskit_algorithms import QAOA
 from qiskit_algorithms.optimizers import COBYLA
 from qiskit_optimization import QuadraticProgram
@@ -97,12 +98,22 @@ def solve_qaoa(
     shots: int = 4096,
     maxiter: int = 250,
     initial_point: Optional[np.ndarray] = None,
+    mixer: Optional[QuantumCircuit] = None,
+    initial_state: Optional[QuantumCircuit] = None,
 ) -> QAOARunResult:
+    """mixer / initial_state default to Qiskit's standard X-mixer / |+>^n
+    when left as None (the module-docstring behavior). Stage 14 passes its
+    own warm-start mixer/initial_state pair through these same arguments so
+    the two variants share every other piece of the pipeline - only the
+    mixer changes, isolating it as the one manipulated variable."""
     sampler = TranspilingAerSampler(seed=seed, default_shots=shots)
     optimizer = COBYLA(maxiter=maxiter)
     init_pt = linear_ansatz_initial_point(reps) if initial_point is None else initial_point
 
-    qaoa = QAOA(sampler=sampler, optimizer=optimizer, reps=reps, initial_point=init_pt)
+    qaoa = QAOA(
+        sampler=sampler, optimizer=optimizer, reps=reps, initial_point=init_pt,
+        mixer=mixer, initial_state=initial_state,
+    )
     meo = MinimumEigenOptimizer(qaoa)
 
     n = qp.get_num_binary_vars()

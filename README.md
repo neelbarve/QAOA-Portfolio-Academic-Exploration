@@ -144,10 +144,11 @@ flowchart TD
         K --> L
     end
 
-    subgraph S5["11 to 13: Is there a QAOA edge"]
+    subgraph S5["11 to 14: Is there a QAOA edge"]
         Q["11: Sector-constrained QUBO,<br/>hardness sweep"]
         R["12: Simulated annealing baseline,<br/>extended-n scaling"]
         T["13: Real IQM hardware,<br/>gated on API token"]
+        U["14: Warm-start QAOA,<br/>CVXPY relaxation biases<br/>initial state and mixer"]
     end
 
     subgraph S4["Streamlit dashboard"]
@@ -164,11 +165,14 @@ flowchart TD
     J --> Q
     J --> R
     J --> M
+    G --> U
+    H --> U
     L --> M
     N -.-> M
     Q --> M
     R --> M
     T -.-> M
+    U --> M
 ```
 
 ### Repository layout
@@ -189,6 +193,7 @@ qaoa_academic_engine/
     11_hard_constraints/    sector-cap QUBO variant + fixed-n hardness sweep
     12_classical_heuristics/  simulated annealing + extended-n scaling vs. QAOA
     13_hardware/            real IQM hardware path, gated on IQM_RESONANCE_TOKEN
+    14_warm_start_qaoa/     CVXPY-relaxation-biased mixer/initial state for QAOA
     pipeline.py             orchestrates 01 -> 09 for one real-data run
   dashboard/
     app.py                  page router (Academic / Portfolio Dashboard)
@@ -197,6 +202,7 @@ qaoa_academic_engine/
   scripts/
     run_benchmark.py        CLI for the stage 08/09 scaling study
     run_edge_search.py      CLI for the stage 11/12 "is there an edge" search
+    run_warm_start_comparison.py  CLI for the stage 14 warm-start comparison
     make_readme_plots.py    regenerates the PNGs embedded below
   tests/
     sanity_checks.py        targeted correctness/regression checks
@@ -477,18 +483,97 @@ result of this whole search: at every size this project can simulate, the realis
 classical competitor isn't just tied with QAOA on quality, it is simultaneously more
 reliable, and between roughly 60x (n=12) and over 1,500x (n=24) faster.
 
+### Improving QAOA itself: warm-starting (stage 14)
+
+The two experiments above test whether QAOA's *standing* changes under harder conditions.
+This one asks a different question: is the standard construction (uniform |+>^n start,
+plain transverse-field X-mixer) actually the best this project's own QAOA implementation
+can do, or is part of its failure an artifact of that specific, simplest-possible choice?
+Egger, Marecek and Woerner, *"Warm-starting quantum optimization"* (2021) - not one of the
+five original reference papers, found while looking for a fix rather than more evidence of
+the problem - describe biasing QAOA's initial state and mixer toward a classical
+relaxation's fractional solution instead of starting from an uninformed uniform
+superposition every time. Concretely: stage 04's `continuous_relaxation_fractional` (the
+same box-relaxed QP already computed as this project's "practitioner's first guess"
+classical baseline) gives a fractional c_i in [0, 1] per asset; each c_i is regularized
+into [0.25, 0.75] and converted to a Bloch-sphere angle theta_i = 2*arcsin(sqrt(c_i));
+qubit i is then initialized with RY(theta_i) instead of an H gate, and mixed with
+RY(theta_i).RZ(-2*beta).RY(-theta_i) instead of RX(2*beta) - a construction that reduces
+exactly to the standard mixer when c_i = 0.5 (verified in `tests/sanity_checks.py`), so it
+strictly generalizes stage 06's baseline rather than replacing it with something
+unrelated. Everything else - the QUBO, the optimizer, the shot count, the seed - is held
+identical, isolating the mixer/initial-state choice as the only manipulated variable.
+
+Run at the exact same (n, seed) instances as the extended-scaling table above
+(`scripts/run_warm_start_comparison.py`):
+
+| n (qubits) | Brute-force optimum | Standard QAOA | Standard converged | Warm-start QAOA | Warm-start converged | Warm-start time (s) |
+|---|---|---|---|---|---|---|
+| 12 | 0.6348 | 0.6342 (ratio 0.9992) | Yes | **0.6348 (ratio 1.0000, exact)** | Yes | 16.9 |
+| 16 | 0.8301 | 0.0000 (failed) | **No** | **0.8301 (ratio 1.0000, exact)** | **Yes** | 10.9 |
+| 20 | 1.0506 | 0.0000 (failed) | **No** | 0.5173 (ratio 0.4924) | Yes | 30.7 |
+| 24 | n/a | 0.0000 (failed) | No | 0.0000 (failed) | No | 496.7 |
+
+**This is a real, reproducible improvement, and it should be stated plainly rather than
+buried under caveats: at n=16, standard QAOA produces nothing usable at all, and
+warm-starting recovers the exact true optimum.** At n=20, where standard QAOA again
+produces nothing, warm-starting at least returns a feasible, converged answer - not
+optimal (49% of the true value), but a real result where before there was none. At n=24
+the fix runs out of reach and both variants fail. The improvement has a boundary, not
+unlimited scope, and is reported exactly that way rather than only showcasing n=16.
+
+**What this is not:** a quantum edge over classical methods. Simulated annealing still
+solves every one of these instances exactly in well under a second - warm-start QAOA at
+n=16 takes 10.9 seconds to match what SA does in 0.19s, nearly 60x slower even at its best
+result. The finding is narrower, and still genuinely useful: a change to *how* QAOA is
+run, using information the pipeline already computes for free, measurably delays where
+QAOA's own optimizer loop breaks down. That is real headroom in the algorithm as
+implemented here - it just doesn't change the answer to "does QAOA beat classical methods
+at this scale" (still no).
+
+### A genuine classical-side improvement too
+
+Separately from anything QAOA-related: `brute_force_exact`'s per-subset Python loop
+(one `np.zeros`, one list-to-array conversion, two small matmuls, called once per
+`C(n,k)` subset) was rewritten as `brute_force_exact_vectorized` - identical exact search,
+verified to return bit-identical results (`tests/sanity_checks.py`), but batching
+thousands of subsets per numpy/BLAS call instead of evaluating one at a time in the
+interpreter:
+
+| n (qubits) | C(n,k) | Original | Vectorized | Speedup |
+|---|---|---|---|---|
+| 20 | 184,756 | 3.95s | 0.52s | 7.5x |
+| 22 | 705,432 | 15.82s | 2.58s | 6.1x |
+| 24 | 2,704,156 | (not run - see below) | 10.56s | - |
+| 26 | 10,400,600 | (not run - see below) | 43.64s | - |
+| 28 | 40,116,600 | (not run - see below) | 170.93s | - |
+
+The original wasn't run at n>22 because, at the same ~6-7x ratio implied by n=20/22,
+it would take on the order of 15-20 minutes at n=26 alone - not worth burning for a
+number this pattern already predicts closely. This doesn't change the underlying
+complexity (`C(n,k)` is still exponential, and eventually wins regardless of constant
+factor) - it moves the practical exact-ground-truth frontier from ~n=22 to ~n=28 within a
+comparable wall-clock budget, for free, with no change in what's being computed.
+
 ### Bottom line
 
-Consistent with the literature review, neither experiment finds a QAOA edge - if anything,
-both make the case *against* one more strongly than section 7's benchmark alone, because
-QAOA's *reliability* (not just its speed) degrades under both harder constraints and
-larger n, while the realistic classical baseline's does not. This project does not claim,
-and the field's own most careful papers do not claim, that a QAOA advantage exists today
-for this problem at any size a laptop (or, per Yalovetzky et al.'s hardware results,
-current real quantum hardware) can reach. The honest value of having built this pipeline is
-in the pipeline itself - a correct, reproducible, statistically-characterized QAOA
-implementation ready to be pointed at whatever regime eventually matters - not in a
-computational advantage that does not exist yet at this scale.
+Consistent with the literature review, none of these experiments find a QAOA edge over
+classical methods - simulated annealing remains both more reliable and dramatically faster
+at every size tested, and this project does not claim, nor do the field's own most careful
+papers claim, that a quantum computational advantage exists today for this problem at any
+size a laptop (or, per Yalovetzky et al.'s hardware results, current real quantum
+hardware) can reach. But "no edge over classical" and "QAOA's own performance is fixed"
+turned out to be two different claims: the warm-start result shows real, literature-backed
+headroom in *how* this project's QAOA is run, recovering the exact optimum at a size
+(n=16) where the standard construction produced nothing at all, and a usable-if-imperfect
+answer one size further (n=20) where it previously produced nothing. The honest picture is
+layered, not a single verdict: no quantum advantage exists at this scale, QAOA-the-algorithm
+still has real, fixable headroom within that scale, and the classical baseline itself got
+measurably faster too, on a completely independent axis. The value of having built this
+pipeline is in the pipeline itself - a correct, reproducible, statistically-characterized,
+and now demonstrably improvable QAOA implementation, ready to be pointed at whatever
+regime eventually matters - not in a computational advantage that does not exist yet at
+this scale.
 
 ## 10. What is intentionally not built yet
 

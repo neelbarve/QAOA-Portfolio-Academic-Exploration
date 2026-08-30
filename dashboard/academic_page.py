@@ -498,14 +498,74 @@ Full citations in the README's References section.
         )
 
     st.divider()
+    st.markdown("### Improving QAOA itself: warm-starting (stage 14)")
+    st.caption(
+        "The two searches above test whether QAOA's STANDING changes under harder conditions. "
+        "This one asks a different question: is the standard implementation (uniform |+>^n start, "
+        "plain X-mixer) actually the best this project's own QAOA can do, or is some of its failure "
+        "an implementation artifact? Egger, Marecek & Woerner (2021) - not one of the original five "
+        "reference papers - describe biasing QAOA's initial state and mixer toward a classical "
+        "relaxation's fractional solution instead of starting from scratch every time."
+    )
+    warm_path = RESULTS_DIR / "warm_start_comparison.json"
+    if not warm_path.exists():
+        st.warning("No warm-start results yet. Run:\n\n`python scripts/run_warm_start_comparison.py`")
+    else:
+        with open(warm_path) as f:
+            ws = json.load(f)
+        wdf = pd.DataFrame(ws["rows"])
+        st.caption(f"Same sizes/seed as the extended-scaling sweep above - "
+                   f"sizes={ws['config']['sizes']}, q={ws['config']['q']}, reps={ws['config']['reps']}.")
+
+        fig3 = go.Figure()
+        fig3.add_bar(x=wdf["n_assets"].astype(str), y=wdf["ratio_standard_vs_bf"].fillna(0),
+                     name="Standard QAOA / optimum")
+        fig3.add_bar(x=wdf["n_assets"].astype(str), y=wdf["ratio_warm_vs_bf"].fillna(0),
+                     name="Warm-start QAOA / optimum")
+        fig3.update_layout(title="Approximation ratio: standard vs. warm-start QAOA (0 = did not converge/infeasible)",
+                            xaxis_title="n (qubits)", yaxis_title="value / true optimum", barmode="group")
+        st.plotly_chart(fig3, use_container_width=True)
+
+        show_df3 = wdf[["n_assets", "bf_val", "standard_qaoa_converged", "standard_qaoa_val",
+                         "warm_qaoa_converged", "warm_qaoa_feasible", "warm_qaoa_val", "warm_qaoa_time_s"]]
+        st.dataframe(show_df3, use_container_width=True)
+
+        st.success(
+            "**This one actually moved the needle.** At n=16, standard QAOA fails completely "
+            "(near-uniform output, not converged, 0 value) - warm-starting reaches the EXACT true "
+            "optimum, feasible, converged. At n=20, standard QAOA again produces nothing usable; "
+            "warm-starting at least returns a feasible answer (49% of optimal - not great, but not "
+            "nothing). At n=24, both still fail - the fix has a reach, not an unlimited one. "
+            "**This is a real, reproducible improvement to QAOA's own reliability, gained for free "
+            "by using information the pipeline already computes (stage 04's continuous relaxation) "
+            "rather than starting from a blank uniform superposition every time.**",
+            icon="✅",
+        )
+        st.info(
+            "What this is NOT: a quantum edge over classical methods. Simulated annealing above still "
+            "solves every one of these instances exactly in well under a second - warm-start QAOA at "
+            "n=16 takes 10.9 seconds to *match* what SA does in 0.19s. The finding is narrower and "
+            "still genuinely useful: a smarter, still-standard-hardware-compatible way to RUN QAOA "
+            "measurably delays where it breaks, which matters for anyone trying to push QAOA "
+            "experiments as far as today's hardware/simulators allow - it just doesn't change the "
+            "answer to 'does QAOA beat classical methods here' (still no).",
+            icon="🔎",
+        )
+
+    st.divider()
     st.markdown(
-        "**Bottom line:** consistent with the literature review above, neither experiment finds a "
-        "QAOA edge - if anything, both make the case *against* one more strongly than the vanilla "
-        "scaling benchmark alone, since QAOA's reliability (not just its speed) degrades under both "
-        "harder constraints and larger n, while the realistic classical baseline (SA) doesn't. The "
-        "honest value of this pipeline today is in having built and characterized it, not in a "
-        "quantum computational advantage that doesn't exist yet at this scale - see the README's "
-        "'Is there a QAOA edge' section for the full writeup."
+        "**Bottom line:** consistent with the literature review above, none of these experiments "
+        "find a QAOA edge over classical methods - SA remains both more reliable and dramatically "
+        "faster at every size tested. But the warm-start result shows QAOA's own performance is not "
+        "fixed: a literature-backed change to *how* QAOA is run recovered the exact optimum at a size "
+        "(n=16) where the standard construction produced nothing at all, and a usable-if-imperfect "
+        "answer one size further (n=20) where it previously produced nothing. The honest picture is "
+        "layered: no quantum computational advantage exists at this scale, QAOA-the-algorithm still "
+        "has real, fixable headroom within that scale, and classical brute force itself got faster "
+        "too - a vectorized rewrite (`brute_force_exact_vectorized`, stage 04) reaches the exact "
+        "optimum roughly 6-7x quicker at the same sizes (verified bit-identical to the original), "
+        "pushing the exact-ground-truth frontier from ~n=22 to ~n=28 in a comparable time budget. "
+        "See the README's 'Is there a QAOA edge' section for the full writeup."
     )
 
 

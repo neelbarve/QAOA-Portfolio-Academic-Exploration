@@ -1,0 +1,121 @@
+{
+  "rows": [
+    {
+      "n_assets": 12,
+      "k": 6,
+      "bf_val": 0.6347770269742518,
+      "sa_val": 0.6347770269742518,
+      "sa_time_s": 0.18130135536193848,
+      "standard_qaoa_val": 0.6342386388683502,
+      "standard_qaoa_feasible": true,
+      "standard_qaoa_converged": true,
+      "standard_qaoa_time_s": 11.63832688331604,
+      "warm_qaoa_val": 0.6347770269742518,
+      "warm_qaoa_feasible": true,
+      "warm_qaoa_converged": true,
+      "warm_qaoa_time_s": 16.92845392227173,
+      "ratio_warm_vs_bf": 1.0,
+      "ratio_standard_vs_bf": 0.9991518468958024
+    },
+    {
+      "n_assets": 16,
+      "k": 8,
+      "bf_val": 0.8301253371802061,
+      "sa_val": 0.8301253371802061,
+      "sa_time_s": 0.18997573852539062,
+      "standard_qaoa_val": 0.0,
+      "standard_qaoa_feasible": false,
+      "standard_qaoa_converged": false,
+      "standard_qaoa_time_s": 14.096731901168823,
+      "warm_qaoa_val": 0.8301253371802061,
+      "warm_qaoa_feasible": true,
+      "warm_qaoa_converged": true,
+      "warm_qaoa_time_s": 10.908464431762695,
+      "ratio_warm_vs_bf": 1.0,
+      "ratio_standard_vs_bf": null
+    },
+    {
+      "n_assets": 20,
+      "k": 10,
+      "bf_val": 1.0506491910893436,
+      "sa_val": 1.0506491910893436,
+      "sa_time_s": 0.1857452392578125,
+      "standard_qaoa_val": 0.0,
+      "standard_qaoa_feasible": false,
+      "standard_qaoa_converged": false,
+      "standard_qaoa_time_s": 40.02519345283508,
+      "warm_qaoa_val": 0.5173287057513556,
+      "warm_qaoa_feasible": true,
+      "warm_qaoa_converged": true,
+      "warm_qaoa_time_s": 30.724984645843506,
+      "ratio_warm_vs_bf": 0.4923895722177011,
+      "ratio_standard_vs_bf": null
+    },
+    {
+      "n_assets": 24,
+      "k": 12,
+      "bf_val": null,
+      "sa_val": 1.2353049809558312,
+      "sa_time_s": 0.33959341049194336,
+      "standard_qaoa_val": 0.0,
+      "standard_qaoa_feasible": false,
+      "standard_qaoa_converged": false,
+      "standard_qaoa_time_s": 512.7839133739471,
+      "warm_qaoa_val": 0.0,
+      "warm_qaoa_feasible": false,
+      "warm_qaoa_converged": false,
+      "warm_qaoa_time_s": 496.7029824256897,
+      "ratio_warm_vs_bf": null,
+      "ratio_standard_vs_bf": null
+    }
+  ],
+  "warm_start_raw": [
+    {
+      "n_assets": 12,
+      "k": 6,
+      "warm_start_available": true,
+      "warm_val": 0.6347770269742518,
+      "warm_feasible": true,
+      "warm_converged": true,
+      "warm_time_s": 16.92845392227173
+    },
+    {
+      "n_assets": 16,
+      "k": 8,
+      "warm_start_available": true,
+      "warm_val": 0.8301253371802061,
+      "warm_feasible": true,
+      "warm_converged": true,
+      "warm_time_s": 10.908464431762695
+    },
+    {
+      "n_assets": 20,
+      "k": 10,
+      "warm_start_available": true,
+      "warm_val": 0.5173287057513556,
+      "warm_feasible": true,
+      "warm_converged": true,
+      "warm_time_s": 30.724984645843506
+    },
+    {
+      "n_assets": 24,
+      "k": 12,
+      "warm_start_available": true,
+      "warm_val": 0.0,
+      "warm_feasible": false,
+      "warm_converged": false,
+      "warm_time_s": 496.7029824256897
+    }
+  ],
+  "config": {
+    "sizes": [
+      12,
+      16,
+      20,
+      24
+    ],
+    "q": 0.5,
+    "reps": 2,
+    "seed": 42
+  }
+}

@@ -25,7 +25,7 @@ import _bootstrap  # noqa: E402
 import numpy as np  # noqa: E402
 
 from scaling_benchmark import make_synthetic_universe  # noqa: E402
-from markowitz import brute_force_exact, objective  # noqa: E402
+from markowitz import brute_force_exact, brute_force_exact_vectorized, objective  # noqa: E402
 from qiskit_qubo import build_qubo  # noqa: E402
 from exact_qubo_solver import solve_exact_qubo  # noqa: E402
 from manual_ising import to_ising_hamiltonian, find_minimal_penalty  # noqa: E402
@@ -33,6 +33,7 @@ from cleaning import preprocess_price_panel, MISSING_DROP_THRESHOLD  # noqa: E40
 from base_adapter import AssetUniverseAdapter  # noqa: E402
 from sector_constrained import assign_sectors, brute_force_sector_constrained  # noqa: E402
 from simulated_annealing import simulated_annealing  # noqa: E402
+from warm_start_qaoa import compute_warm_start_angles, EPSILON  # noqa: E402
 
 _failures = []
 
@@ -174,6 +175,48 @@ def check_simulated_annealing_reaches_known_optimum():
     )
 
 
+def check_vectorized_brute_force_matches_original():
+    """stage 04's batched-numpy brute force is claimed to be an exact,
+    faster reimplementation of the original per-subset Python loop, not an
+    approximation - this is the check that claim actually rests on."""
+    mu, sigma = make_synthetic_universe(11, seed=7)
+    k, q = 5, 0.4
+    r1 = brute_force_exact(mu, sigma, k, q)
+    r2 = brute_force_exact_vectorized(mu, sigma, k, q)
+    check(
+        "vectorized brute force matches the original exactly",
+        np.isclose(r1.value, r2.value, atol=1e-9) and set(r1.selection) == set(r2.selection),
+        f"original={r1.value:.6f} {r1.selection} vs vectorized={r2.value:.6f} {r2.selection}",
+    )
+
+
+def check_warm_start_angles_reduce_to_standard_mixer_at_c_half():
+    """Egger et al.'s construction is built to strictly generalize the
+    standard X-mixer: at c_i=0.5 (relaxation has no opinion on asset i),
+    theta_i should come out to exactly pi/2 - the angle at which the
+    warm-start mixer's rotated basis coincides with the standard one."""
+    mu, sigma = make_synthetic_universe(6, seed=8)
+    # Force a relaxation-neutral case is impractical to construct directly;
+    # instead check the theta(c) formula itself at its defined boundary,
+    # since compute_warm_start_angles clips into [EPSILON, 1-EPSILON] and
+    # applies theta = 2*arcsin(sqrt(c)) - c=0.5 must map to theta=pi/2.
+    c_half = np.array([0.5])
+    theta = 2 * np.arcsin(np.sqrt(np.clip(c_half, EPSILON, 1 - EPSILON)))
+    check(
+        "warm-start theta(c=0.5) equals pi/2 (standard-mixer-equivalent point)",
+        np.isclose(theta[0], np.pi / 2, atol=1e-9),
+        f"theta={theta[0]:.6f} vs pi/2={np.pi/2:.6f}",
+    )
+
+    warm = compute_warm_start_angles(mu, sigma, k=3, q=0.5)
+    check(
+        "warm-start angles are computed for every asset and stay in [0, pi]",
+        warm.available and warm.thetas is not None and len(warm.thetas) == 6
+        and bool(np.all((warm.thetas >= 0) & (warm.thetas <= np.pi))),
+        f"available={warm.available}, thetas={warm.thetas}",
+    )
+
+
 def run_all() -> tuple[list[str], bool]:
     """Run every check, returning the list of failure names (empty = all
     passed) - importable by the dashboard's sanity_runner.py so both the
@@ -187,6 +230,8 @@ def run_all() -> tuple[list[str], bool]:
     check_budget_is_never_hardcoded_downstream()
     check_sector_constraint_is_actually_enforced()
     check_simulated_annealing_reaches_known_optimum()
+    check_vectorized_brute_force_matches_original()
+    check_warm_start_angles_reduce_to_standard_mixer_at_c_half()
     return list(_failures), len(_failures) == 0
 
 

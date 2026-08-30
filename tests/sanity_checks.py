@@ -32,7 +32,7 @@ from manual_ising import to_ising_hamiltonian, find_minimal_penalty  # noqa: E40
 from cleaning import preprocess_price_panel, MISSING_DROP_THRESHOLD  # noqa: E402
 from base_adapter import AssetUniverseAdapter  # noqa: E402
 from sector_constrained import assign_sectors, brute_force_sector_constrained  # noqa: E402
-from simulated_annealing import simulated_annealing  # noqa: E402
+from simulated_annealing import simulated_annealing, simulated_annealing_warm_started  # noqa: E402
 from warm_start_qaoa import compute_warm_start_angles, EPSILON  # noqa: E402
 
 _failures = []
@@ -175,6 +175,22 @@ def check_simulated_annealing_reaches_known_optimum():
     )
 
 
+def check_warm_start_sa_reaches_known_optimum():
+    """simulated_annealing_warm_started should be at least as reliable as
+    the random-start version it wraps - it starts from a good guess, not a
+    worse one, so it should still find the known optimum on a small,
+    exactly-solvable instance."""
+    mu, sigma = make_synthetic_universe(8, seed=9)
+    k, q = 4, 0.5
+    bf = brute_force_exact(mu, sigma, k, q)
+    sa = simulated_annealing_warm_started(mu, sigma, k, q, n_iters=3000, seed=9)
+    check(
+        "warm-start SA reaches the known optimum on a small instance",
+        np.isclose(sa.value, bf.value, rtol=1e-6),
+        f"warm-SA={sa.value:.6f} vs brute-force={bf.value:.6f}",
+    )
+
+
 def check_vectorized_brute_force_matches_original():
     """stage 04's batched-numpy brute force is claimed to be an exact,
     faster reimplementation of the original per-subset Python loop, not an
@@ -230,6 +246,7 @@ def run_all() -> tuple[list[str], bool]:
     check_budget_is_never_hardcoded_downstream()
     check_sector_constraint_is_actually_enforced()
     check_simulated_annealing_reaches_known_optimum()
+    check_warm_start_sa_reaches_known_optimum()
     check_vectorized_brute_force_matches_original()
     check_warm_start_angles_reduce_to_standard_mixer_at_c_half()
     return list(_failures), len(_failures) == 0

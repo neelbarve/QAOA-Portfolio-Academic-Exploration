@@ -553,15 +553,59 @@ Full citations in the README's References section.
         )
 
     st.divider()
+    st.markdown("### Does warm-starting help simulated annealing too?")
+    st.caption(
+        "The obvious follow-up: if biasing QAOA's start with the relaxation helped, does the "
+        "same trick help SA - the method already beating QAOA on every axis? Tracks each run's "
+        "best-value-so-far trajectory and measures the iteration it first reaches its own final "
+        "value, across 40 runs (sizes 16-32, 8 seeds each)."
+    )
+    sa_warm_path = RESULTS_DIR / "sa_warm_start_comparison.json"
+    if not sa_warm_path.exists():
+        st.warning("No SA warm-start results yet. Run:\n\n`python scripts/run_sa_warm_start_comparison.py`")
+    else:
+        with open(sa_warm_path) as f:
+            saw = json.load(f)
+        s = saw["summary"]
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Converged instantly (0 iters)", f"{s['instant_count']}/{s['n_runs']}",
+                   f"{100*s['instant_fraction']:.0f}%")
+        c2.metric("Warm found a WORSE final value", f"{s['worse_final_count']}/{s['n_runs']}")
+        if "non_instant_count" in s:
+            c3.metric("Of non-instant runs, warm was slower", f"{s['non_instant_slower_count']}/{s['non_instant_count']}")
+
+        sadf = pd.DataFrame(saw["rows"])
+        show_sa = sadf[["n_assets", "seed", "random_iters_to_converge", "random_final_val",
+                         "warm_iters_to_converge", "warm_final_val"]]
+        st.dataframe(show_sa, use_container_width=True)
+
+        st.warning(
+            "A naive mean(random_iters / warm_iters) here comes out around 1,400x - real "
+            "arithmetic, but a misleading headline: most of that comes from dividing by "
+            "near-zero denominators when warm-start converges instantly. The truer picture: "
+            "**72% of runs needed zero annealing at all** - the relaxation-rounded guess already "
+            "matched what SA finds from scratch. But of the 28% that genuinely still needed "
+            "annealing, warm-starting was NOT reliably faster - most of those took MORE "
+            "iterations than a random start, and one run even landed on a strictly worse final "
+            "answer. This is a different finding than QAOA's: it isn't 'smarter search,' it's "
+            "'the starting guess is often already good enough that no search is needed' - and "
+            "when search actually happens, the warm start is a wash at best.",
+            icon="⚖️",
+        )
+
+    st.divider()
     st.markdown(
         "**Bottom line:** consistent with the literature review above, none of these experiments "
         "find a QAOA edge over classical methods - SA remains both more reliable and dramatically "
         "faster at every size tested. But the warm-start result shows QAOA's own performance is not "
         "fixed: a literature-backed change to *how* QAOA is run recovered the exact optimum at a size "
         "(n=16) where the standard construction produced nothing at all, and a usable-if-imperfect "
-        "answer one size further (n=20) where it previously produced nothing. The honest picture is "
-        "layered: no quantum computational advantage exists at this scale, QAOA-the-algorithm still "
-        "has real, fixable headroom within that scale, and classical brute force itself got faster "
+        "answer one size further (n=20) where it previously produced nothing. Warm-starting SA with "
+        "the same relaxation, tested for completeness, shows the fix doesn't generalize "
+        "automatically: it mostly just lets SA skip a search it would have won anyway. The honest "
+        "picture is layered: no quantum computational advantage exists at this scale, "
+        "QAOA-the-algorithm still has real, fixable headroom within that scale, that fix is specific "
+        "to QAOA rather than universal, and classical brute force itself got faster "
         "too - a vectorized rewrite (`brute_force_exact_vectorized`, stage 04) reaches the exact "
         "optimum roughly 6-7x quicker at the same sizes (verified bit-identical to the original), "
         "pushing the exact-ground-truth frontier from ~n=22 to ~n=28 in a comparable time budget. "

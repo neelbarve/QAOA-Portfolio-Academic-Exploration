@@ -1,10 +1,14 @@
-# QAOA for Constrained Portfolio Optimization
+# QAOA for Constrained Portfolio Optimization (Part 1: Academic)
+
+> **Looking for the portfolio dashboard (Part 2)?** This branch (`main`) is the
+> academic-only build. Use the **branch selector at the top of this repository's file
+> list** and switch to `portfolio-dashboard` for the full portfolio-management extension
+> (which also includes everything in this branch, reused as a library).
 
 An academic engine that reformulates the cardinality-constrained Markowitz portfolio
 problem as a QUBO, solves it with the Quantum Approximate Optimization Algorithm (QAOA),
 and benchmarks the result against classical solvers, on real crypto and equity market
-data. Built as Part 1 (academic) of a two-part project; Part 2 (a portfolio-management
-dashboard extension) is a reserved, currently-blank page in the same app.
+data. This is Part 1 (academic) of a two-part project.
 
 This document is the project's single reference: why it exists, what data it uses, how
 to run it, how it is organized, what was assumed, and what the results actually show

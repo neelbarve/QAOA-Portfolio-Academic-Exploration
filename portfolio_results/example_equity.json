@@ -1,0 +1,68 @@
+{
+  "symbols": [
+    "AAPL",
+    "AVGO",
+    "CRM",
+    "GOOGL",
+    "META",
+    "MSFT",
+    "NVDA",
+    "ORCL"
+  ],
+  "n_assets": 8,
+  "k": 4,
+  "shrinkage_intensity": 0.0619946888272594,
+  "quantum": {
+    "method": "qaoa",
+    "symbols": [
+      "AAPL",
+      "AVGO",
+      "GOOGL",
+      "NVDA"
+    ],
+    "feasible": true,
+    "converged": true,
+    "elapsed_s": 43.59547567367554,
+    "weights": [
+      1.8347079724512638e-23,
+      0.18169553201609073,
+      0.8183044679839093,
+      0.0
+    ],
+    "weight_method": "mean_variance_qp",
+    "expected_return": 0.39886622078163436,
+    "expected_variance": 0.09662987224606714,
+    "portfolio_var": {
+      "0.9": 0.13437497031237527,
+      "0.95": 0.20067189234022387,
+      "0.99": 0.2770551302956851
+    }
+  },
+  "classical": {
+    "method": "brute_force",
+    "symbols": [
+      "AAPL",
+      "AVGO",
+      "GOOGL",
+      "NVDA"
+    ],
+    "feasible": true,
+    "converged": null,
+    "elapsed_s": 0.0019283294677734375,
+    "weights": [
+      1.8347079724512638e-23,
+      0.18169553201609073,
+      0.8183044679839093,
+      0.0
+    ],
+    "weight_method": "mean_variance_qp",
+    "expected_return": 0.39886622078163436,
+    "expected_variance": 0.09662987224606714,
+    "portfolio_var": {
+      "0.9": 0.13437497031237527,
+      "0.95": 0.20067189234022387,
+      "0.99": 0.2770551302956851
+    }
+  },
+  "quantum_skipped_reason": null
+}

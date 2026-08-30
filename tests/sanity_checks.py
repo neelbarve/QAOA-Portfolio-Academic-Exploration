@@ -31,6 +31,8 @@ from exact_qubo_solver import solve_exact_qubo  # noqa: E402
 from manual_ising import to_ising_hamiltonian, find_minimal_penalty  # noqa: E402
 from cleaning import preprocess_price_panel, MISSING_DROP_THRESHOLD  # noqa: E402
 from base_adapter import AssetUniverseAdapter  # noqa: E402
+from sector_constrained import assign_sectors, brute_force_sector_constrained  # noqa: E402
+from simulated_annealing import simulated_annealing  # noqa: E402
 
 _failures = []
 
@@ -133,6 +135,45 @@ def check_budget_is_never_hardcoded_downstream():
     check("solver core handles an arbitrary (n, k) pair", bf.selection is not None and len(bf.selection) == k)
 
 
+def check_sector_constraint_is_actually_enforced():
+    """A tight per-sector cap should force a DIFFERENT (worse-or-equal, never
+    better) selection than the unconstrained brute-force optimum - if it
+    didn't, the constraint wouldn't be doing anything. Also checks the
+    returned selection genuinely respects every sector's cap."""
+    mu, sigma = make_synthetic_universe(10, seed=5)
+    k, q = 5, 0.5
+    unconstrained = brute_force_exact(mu, sigma, k, q)
+
+    sectors = assign_sectors(10, n_sectors=5, seed=5)   # cap=1 forces one-per-sector
+    constrained = brute_force_sector_constrained(mu, sigma, k, q, sectors, sector_cap=1)
+
+    counts = np.bincount(sectors[list(constrained.selection)], minlength=sectors.max() + 1)
+    respects_cap = bool(np.all(counts <= 1))
+    no_better_than_unconstrained = constrained.value <= unconstrained.value + 1e-9
+    check(
+        "sector-constrained brute force respects the cap and never beats the unconstrained optimum",
+        constrained.feasible and respects_cap and no_better_than_unconstrained,
+        f"constrained={constrained.value:.6f} (sector counts {counts.tolist()}) "
+        f"vs unconstrained={unconstrained.value:.6f}",
+    )
+
+
+def check_simulated_annealing_reaches_known_optimum():
+    """On a small instance where brute force is exact, SA (given a generous
+    iteration budget relative to the tiny search space) should reliably find
+    the same optimum - if it consistently didn't, the neighbor-move/cooling
+    logic would be broken, not just imprecise."""
+    mu, sigma = make_synthetic_universe(8, seed=6)
+    k, q = 4, 0.5
+    bf = brute_force_exact(mu, sigma, k, q)
+    sa = simulated_annealing(mu, sigma, k, q, n_iters=3000, seed=6)
+    check(
+        "simulated annealing reaches the known optimum on a small instance",
+        np.isclose(sa.value, bf.value, rtol=1e-6),
+        f"SA={sa.value:.6f} vs brute-force={bf.value:.6f}",
+    )
+
+
 def run_all() -> tuple[list[str], bool]:
     """Run every check, returning the list of failure names (empty = all
     passed) - importable by the dashboard's sanity_runner.py so both the
@@ -144,6 +185,8 @@ def run_all() -> tuple[list[str], bool]:
     check_exact_qubo_matches_brute_force_for_small_n()
     check_manual_ising_agrees_with_qiskit_qubo()
     check_budget_is_never_hardcoded_downstream()
+    check_sector_constraint_is_actually_enforced()
+    check_simulated_annealing_reaches_known_optimum()
     return list(_failures), len(_failures) == 0
 
 

@@ -1,0 +1,86 @@
+{
+  "rows": [
+    {
+      "n_assets": 12,
+      "k": 6,
+      "bf_val": 0.6347770269742518,
+      "bf_time_s": 0.010485410690307617,
+      "sa_val": 0.6347770269742518,
+      "sa_time_s": 0.18130135536193848,
+      "qaoa_val": 0.6342386388683502,
+      "qaoa_feasible": true,
+      "qaoa_converged": true,
+      "qaoa_time_s": 11.63832688331604,
+      "ratio_qaoa_vs_bf": 0.9991518468958024,
+      "ratio_qaoa_vs_sa": 0.9991518468958024,
+      "ratio_sa_vs_bf": 1.0
+    },
+    {
+      "n_assets": 16,
+      "k": 8,
+      "bf_val": 0.8301253371802061,
+      "bf_time_s": 0.16673898696899414,
+      "sa_val": 0.8301253371802061,
+      "sa_time_s": 0.18997573852539062,
+      "qaoa_val": 0.0,
+      "qaoa_feasible": false,
+      "qaoa_converged": false,
+      "qaoa_time_s": 14.096731901168823,
+      "ratio_qaoa_vs_bf": null,
+      "ratio_qaoa_vs_sa": NaN,
+      "ratio_sa_vs_bf": 1.0
+    },
+    {
+      "n_assets": 20,
+      "k": 10,
+      "bf_val": 1.0506491910893436,
+      "bf_time_s": 2.2470173835754395,
+      "sa_val": 1.0506491910893436,
+      "sa_time_s": 0.1857452392578125,
+      "qaoa_val": 0.0,
+      "qaoa_feasible": false,
+      "qaoa_converged": false,
+      "qaoa_time_s": 40.02519345283508,
+      "ratio_qaoa_vs_bf": null,
+      "ratio_qaoa_vs_sa": NaN,
+      "ratio_sa_vs_bf": 1.0
+    },
+    {
+      "n_assets": 24,
+      "k": 12,
+      "bf_val": null,
+      "bf_time_s": null,
+      "sa_val": 1.2353049809558312,
+      "sa_time_s": 0.33959341049194336,
+      "qaoa_val": 0.0,
+      "qaoa_feasible": false,
+      "qaoa_converged": false,
+      "qaoa_time_s": 512.7839133739471,
+      "ratio_qaoa_vs_bf": null,
+      "ratio_qaoa_vs_sa": NaN,
+      "ratio_sa_vs_bf": null
+    }
+  ],
+  "config": {
+    "hardness_n": 12,
+    "n_sectors_list": [
+      1,
+      2,
+      3,
+      4,
+      6
+    ],
+    "extended_sizes": [
+      12,
+      16,
+      20,
+      24
+    ],
+    "exact_cutoff_n": 20,
+    "sa_iters": 6000,
+    "q": 0.5,
+    "reps": 2,
+    "seed": 42,
+    "preset": "standard"
+  }
+}

@@ -383,6 +383,132 @@ def _render_portfolio_dynamics_tab():
     )
 
 
+def _render_edge_search_tab():
+    st.subheader("Is there a QAOA edge?")
+    st.markdown(
+        "The scaling benchmark above shows QAOA matching brute force's solution quality "
+        "when it converges, but never beating it, and being far slower. That raises the "
+        "obvious question: **why use QAOA at all?** This tab answers it two ways - "
+        "what the reference literature says, and what this project's own pipeline finds "
+        "when pushed at two axes brute force can't reach: harder constraints, and larger n."
+    )
+
+    with st.expander("Literature review: does any reference paper find a QAOA edge?", expanded=True):
+        st.markdown(
+            """
+**Short answer: no paper in this project's reference set demonstrates a QAOA edge over
+classical methods on portfolio optimization, at any tested size, on any axis (quality,
+speed, or robustness) - and the more careful papers say so explicitly, unprompted.**
+
+- **Brandhofer et al. (2023)**: *"a quantum advantage of QAOA has not yet been rigorously
+  proven."* Never even ran a classical baseline. Cites a literature extrapolation that a
+  Max-Cut QAOA speedup would need **several hundred qubits** - this project (and every
+  paper in its reference set) tests 4-22 qubits.
+- **Yalovetzky et al. (2026)**, the one real-hardware paper: *"the primary contribution of
+  this work is not to claim advantage over state-of-the-art classical solvers - indeed, SA
+  is exceptionally effective on the instance sizes accessible to current quantum
+  hardware."* Their real Quantinuum-hardware QAOA run scored **0/100 successes** on the two
+  largest test cases.
+- **Uotila et al. (QCE 2025)**, the HUBO paper: ran QAOA against three other methods on 100
+  instances - QAOA finished **last** (3/100 vs. 46-53/100 for exact/classical methods).
+  *"solving higher-order portfolio optimization problems with QAOA proved challenging."*
+
+Where these authors say an edge **might eventually** appear: much larger, harder instances
+than current hardware reaches (Yalovetzky), several hundred qubits *and* much lower
+gate-error rates simultaneously (Brandhofer), or classically-hard non-quadratic objectives
+where even weak QAOA has a lower bar to clear (Uotila's more speculative argument - though
+their own QAOA results on that exact idea were the weakest of the four methods tested).
+Full citations in the README's References section.
+            """
+        )
+
+    st.divider()
+    st.markdown("### This project's own search: harder constraints (stage 11)")
+    st.caption(
+        "Fixed problem size, increasing constraint complexity - a second penalty term "
+        "(per-sector caps) on top of the budget constraint, testing whether QAOA's relative "
+        "standing changes as the QUBO landscape gets more rugged (Uotila et al.'s argument)."
+    )
+    hardness_path = RESULTS_DIR / "hardness_sweep.json"
+    if not hardness_path.exists():
+        st.warning("No hardness-sweep results yet. Run:\n\n`python scripts/run_edge_search.py --preset quick`")
+    else:
+        with open(hardness_path) as f:
+            hs = json.load(f)
+        hdf = pd.DataFrame(hs["rows"])
+        st.caption(f"n_assets={hs['config'].get('hardness_n', hs['config'].get('n_assets'))}, "
+                   f"q={hs['config']['q']}, reps={hs['config']['reps']} - single seed, illustrative not statistical.")
+
+        fig = go.Figure()
+        fig.add_scatter(x=hdf["n_sectors"], y=hdf["qaoa_val"] / hdf["bf_val"], mode="lines+markers",
+                         name="QAOA / brute-force-optimal",
+                         marker=dict(color=["#C62828" if not c else "#6A1B9A" for c in hdf["qaoa_converged"]]))
+        fig.add_hline(y=1.0, line_dash="dot", annotation_text="optimal")
+        fig.update_layout(title="Solution quality vs. constraint hardness (more sectors = tighter, harder constraints)",
+                           xaxis_title="number of sectors (constraint complexity)",
+                           yaxis_title="QAOA value / true optimum")
+        st.plotly_chart(fig, use_container_width=True)
+
+        show_df = hdf[["n_sectors", "sector_cap", "bf_val", "qaoa_val", "qaoa_feasible", "qaoa_converged", "qaoa_time_s"]]
+        st.dataframe(show_df, use_container_width=True)
+        if not hdf["qaoa_converged"].all():
+            st.info(
+                "Rows marked `qaoa_converged=False` mean QAOA's sampled output stayed near-uniform - "
+                "the classical optimizer failed to concentrate probability on ANYTHING within its "
+                "iteration budget, not just a wrong answer. This is a stronger version of the same "
+                "finding as the main scaling benchmark: harder landscapes break QAOA's classical "
+                "optimizer loop before they break the QUBO formulation itself.",
+                icon="🔎",
+            )
+
+    st.divider()
+    st.markdown("### This project's own search: pushing past exact-solver range (stage 12)")
+    st.caption(
+        "Fixed constraint structure, increasing n past where brute force stays practical - "
+        "QAOA compared against simulated annealing (a realistic classical heuristic, matching "
+        "Yalovetzky et al.'s own methodology), not an exact solver that stops being available."
+    )
+    extended_path = RESULTS_DIR / "extended_scaling.json"
+    if not extended_path.exists():
+        st.warning("No extended-scaling results yet. Run:\n\n`python scripts/run_edge_search.py --preset quick`")
+    else:
+        with open(extended_path) as f:
+            ex = json.load(f)
+        edf = pd.DataFrame(ex["rows"])
+        st.caption(f"sizes={ex['config']['extended_sizes']}, exact_cutoff_n={ex['config']['exact_cutoff_n']} "
+                   f"- single seed, illustrative not statistical.")
+
+        fig2 = go.Figure()
+        fig2.add_scatter(x=edf["n_assets"], y=edf["sa_time_s"], mode="lines+markers", name="Simulated annealing")
+        fig2.add_scatter(x=edf["n_assets"], y=edf["qaoa_time_s"], mode="lines+markers", name="QAOA")
+        fig2.update_layout(title="Wall-clock time: SA vs. QAOA", xaxis_title="n (qubits)",
+                            yaxis_title="seconds", yaxis_type="log")
+        st.plotly_chart(fig2, use_container_width=True)
+
+        show_df2 = edf[["n_assets", "bf_val", "sa_val", "qaoa_val", "qaoa_feasible", "qaoa_converged",
+                         "sa_time_s", "qaoa_time_s", "ratio_qaoa_vs_sa"]]
+        st.dataframe(show_df2, use_container_width=True)
+        st.info(
+            "Simulated annealing is feasible by construction at every size (cardinality-preserving "
+            "swap moves), reaches the true optimum whenever it's known, and runs in a fraction of a "
+            "second - orders of magnitude faster than QAOA at every size tested, with no convergence "
+            "failures. That gap is the honest headline number: at these sizes, the realistic classical "
+            "competitor isn't just as good as QAOA, it's both better and dramatically cheaper.",
+            icon="🔎",
+        )
+
+    st.divider()
+    st.markdown(
+        "**Bottom line:** consistent with the literature review above, neither experiment finds a "
+        "QAOA edge - if anything, both make the case *against* one more strongly than the vanilla "
+        "scaling benchmark alone, since QAOA's reliability (not just its speed) degrades under both "
+        "harder constraints and larger n, while the realistic classical baseline (SA) doesn't. The "
+        "honest value of this pipeline today is in having built and characterized it, not in a "
+        "quantum computational advantage that doesn't exist yet at this scale - see the README's "
+        "'Is there a QAOA edge' section for the full writeup."
+    )
+
+
 def render():
     st.title("Academic Page")
     st.caption(
@@ -391,7 +517,7 @@ def render():
     )
     tabs = st.tabs([
         "Run & Results", "Scaling Benchmark", "Fama-French -> Hamiltonian",
-        "Sanity Checks", "Portfolio Dynamics",
+        "Sanity Checks", "Portfolio Dynamics", "Is There An Edge?",
     ])
     with tabs[0]:
         _render_run_results_tab()
@@ -403,3 +529,5 @@ def render():
         _render_sanity_tab()
     with tabs[4]:
         _render_portfolio_dynamics_tab()
+    with tabs[5]:
+        _render_edge_search_tab()

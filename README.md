@@ -144,8 +144,14 @@ flowchart TD
         K --> L
     end
 
+    subgraph S5["11 to 13: Is there a QAOA edge"]
+        Q["11: Sector-constrained QUBO,<br/>hardness sweep"]
+        R["12: Simulated annealing baseline,<br/>extended-n scaling"]
+        T["13: Real IQM hardware,<br/>gated on API token"]
+    end
+
     subgraph S4["Streamlit dashboard"]
-        M["Academic page:<br/>Run and Results, Scaling Benchmark,<br/>Fama-French to Hamiltonian,<br/>Sanity Checks, Portfolio Dynamics"]
+        M["Academic page:<br/>Run and Results, Scaling Benchmark,<br/>Fama-French to Hamiltonian,<br/>Sanity Checks, Portfolio Dynamics,<br/>Is There An Edge"]
         P["Portfolio Dashboard page<br/>Part 2, reserved, blank"]
     end
 
@@ -155,9 +161,14 @@ flowchart TD
     F --> H
     N -.-> H
     J --> K
+    J --> Q
+    J --> R
     J --> M
     L --> M
     N -.-> M
+    Q --> M
+    R --> M
+    T -.-> M
 ```
 
 ### Repository layout
@@ -175,13 +186,17 @@ qaoa_academic_engine/
     08_benchmarking/        multi-seed, multi-size scaling sweep
     09_statistics/          bootstrap CIs, scaling-exponent fits, significance tests
     10_fama_french/         Fama-French factor model -> the same Ising Hamiltonian
+    11_hard_constraints/    sector-cap QUBO variant + fixed-n hardness sweep
+    12_classical_heuristics/  simulated annealing + extended-n scaling vs. QAOA
+    13_hardware/            real IQM hardware path, gated on IQM_RESONANCE_TOKEN
     pipeline.py             orchestrates 01 -> 09 for one real-data run
   dashboard/
     app.py                  page router (Academic / Portfolio Dashboard)
-    academic_page.py        Part 1: five tabs, all live/interactive
+    academic_page.py        Part 1: six tabs, all live/interactive
     portfolio_page.py       Part 2: reserved, intentionally blank
   scripts/
     run_benchmark.py        CLI for the stage 08/09 scaling study
+    run_edge_search.py      CLI for the stage 11/12 "is there an edge" search
     make_readme_plots.py    regenerates the PNGs embedded below
   tests/
     sanity_checks.py        targeted correctness/regression checks
@@ -189,7 +204,7 @@ qaoa_academic_engine/
   data_cache/                cached raw price data (not tracked; regenerated on fetch)
 ```
 
-**Folder numbering.** Directories under `engine/` are numbered 01 through 10 so the file
+**Folder numbering.** Directories under `engine/` are numbered 01 through 13 so the file
 listing itself shows the project's data flow, per the project's own naming convention. A
 directory name starting with a digit is not a legal Python package name for a plain
 `import` statement, so these are not Python packages; `engine/_bootstrap.py` adds each one
@@ -236,16 +251,27 @@ function regardless of which engine is chosen.
   resamples), an OLS log-linear fit for the wall-clock scaling exponent (with standard
   error, R-squared, and p-value), and a paired Wilcoxon signed-rank test (falling back to
   a paired t-test if degenerate) between QAOA and the exact-QUBO control.
+- **Sector-constrained QUBO (stage 11):** the same objective, with a second constraint
+  family added - a maximum number of assets per synthetic "sector" - built directly with
+  `qiskit-optimization`'s `QuadraticProgram` (budget equality plus one inequality per
+  sector) rather than `qiskit-finance`'s single-constraint builder, still solved by the
+  same exact/QAOA solvers from stage 06 unmodified.
+- **Simulated annealing (stage 12):** a discrete SA baseline operating directly on
+  cardinality-preserving bitstrings via swap moves (never producing an infeasible answer,
+  by construction), used as the realistic classical competitor once n exceeds where brute
+  force stays practical - matching the methodology in Yalovetzky et al. (2026).
 
 ## 6. Assumptions
 
 Stated explicitly, since an assumption left implicit is the easiest thing for a reader to
 get wrong:
 
-1. **Simulator, not hardware.** All QAOA runs use Aer's noiseless statevector simulator.
-   No noise model, no real quantum backend, no shot-noise-only sampling. IQM hardware
-   access exists for this project but was not exercised; `qrisp` is included as the
-   intended path for that extension.
+1. **Simulator, not hardware, for every number reported in this README.** All QAOA runs
+   quoted here use Aer's noiseless statevector simulator - no noise model, no real quantum
+   backend, no shot-noise-only sampling. A real-hardware path exists
+   (`engine/13_hardware/iqm_hardware.py`, via `qrisp`'s IQM Resonance backend) and was
+   verified to correctly no-op when no token is configured, but was not exercised against
+   billed hardware time as part of this project - see section 9 for why.
 2. **Selection, not weighting.** The optimizer chooses *which* k assets to hold, all with
    equal weight in this project; it does not solve for continuous portfolio weights. The
    "Portfolio Dynamics" dashboard tab is explicitly labeled illustrative for this reason.
@@ -357,7 +383,114 @@ Both PNGs are regenerated from `results/scaling_results.json` and
 larger-canvas versions (plus the correlation heatmap, the Fama-French Hamiltonian
 heatmap, and the portfolio-dynamics chart) are in the Streamlit dashboard.
 
-## 9. What is intentionally not built yet
+## 9. Is there a QAOA edge?
+
+The scaling benchmark in section 7 shows QAOA matching brute force's solution quality when
+it converges, never beating it, and being far slower - which raises the obvious question a
+reader (and this project's own user) is right to ask: **why use QAOA at all?** This section
+answers it two ways: what the reference literature says, and what happens when this
+project's own pipeline is pushed at two axes brute force can't reach - harder constraints
+and larger n.
+
+### What the literature says
+
+**No paper in this project's reference set demonstrates a QAOA edge over classical methods
+on portfolio optimization, at any tested size, on any axis (quality, speed, or
+robustness) - and the more careful papers say so explicitly, unprompted:**
+
+- **Brandhofer et al. (2023):** *"a quantum advantage of QAOA has not yet been rigorously
+  proven."* Never ran a classical baseline at all - only QAOA variants against each other.
+  Cites a literature extrapolation that a Max-Cut QAOA speedup would need **several hundred
+  qubits**; this project (and every paper in its reference set) tests 4-22 qubits.
+- **Yalovetzky et al. (2026),** the one paper using real quantum hardware: *"the primary
+  contribution of this work is not to claim advantage over state-of-the-art classical
+  solvers - indeed, SA is exceptionally effective on the instance sizes accessible to
+  current quantum hardware."* Their real Quantinuum-hardware QAOA run scored **0 successes
+  out of 100 shots** on the two largest test cases.
+- **Uotila et al. (2025),** the HUBO paper: ran QAOA against three other methods on 100
+  instances - QAOA finished **last** (3/100 vs. 46-53/100 for exact/classical methods).
+  *"solving higher-order portfolio optimization problems with QAOA proved challenging."*
+- **Aggarwal et al. (2025)** and **Turan (2024)** are too small-scale (n=4) or purely
+  simulator-methodological to test the question either way.
+
+Where these authors say an edge **might eventually** appear: much larger, harder instances
+than current hardware reaches (Yalovetzky et al.); several hundred qubits *and* much lower
+gate-error rates simultaneously, since the mixers that look best in simulation degrade
+fastest under realistic noise (Brandhofer et al.); or classically-hard non-quadratic
+objectives where even a weak QAOA has a lower bar to clear (Uotila et al.'s more
+speculative argument - though their own QAOA results on that exact idea were the weakest
+of the four methods they tested). Full citations in section 12.
+
+### This project's own search
+
+Two experiments, run and reported honestly regardless of outcome (`scripts/run_edge_search.py`;
+single seed each, illustrative rather than the multi-seed statistical rigor of section 7's
+main benchmark):
+
+**Hardness sweep (stage 11, `--preset standard`):** fixed n=12, increasing the number of
+per-sector caps
+stacked on top of the budget constraint - testing Uotila et al.'s speculative "harder
+constraints favor QAOA" argument directly.
+
+| Sectors | Sector cap | Brute-force optimum | QAOA value | QAOA feasible | QAOA converged | QAOA time (s) |
+|---|---|---|---|---|---|---|
+| 1 | 6 | 0.6348 | 0.7953 | No | Yes | 17.8 |
+| 2 | 3 | 0.6348 | 0.0000 | No | **No** | 11.1 |
+| 3 | 2 | 0.6348 | 0.0000 | No | **No** | 14.8 |
+| 4 | 2 | 0.6348 | 0.0000 | No | **No** | 26.4 |
+| 6 | 1 | 0.6348 | 0.6348 | Yes | Yes | 9.3 |
+
+"QAOA converged: No" means something more severe than a wrong answer: the sampled
+distribution stayed near-uniform, so the classical optimizer failed to concentrate
+probability on *anything* within its 250-iteration budget - not a worse solution, no
+usable signal at all. This is a stronger version of the main benchmark's finding: a more
+rugged, multi-penalty QUBO landscape (exactly what Uotila et al.'s Fig. 5c shows more
+constraints produce) breaks QAOA's classical optimizer loop across three consecutive
+sector counts, before recovering only at the most tightly-constrained setting tested
+(6 sectors, cap 1 - the smallest effective search space of the five). No configuration
+here shows QAOA doing anything other than tying or losing against the exact optimum.
+
+**Extended scaling (stage 12, `--preset standard`):** fixed constraint structure,
+increasing n past where brute force stays practical (n=12, 16, 20, 24; exact ground truth
+kept only up to n=20), QAOA compared against simulated annealing - a realistic classical
+heuristic operating directly on cardinality-preserving bitstrings, matching Yalovetzky et
+al.'s own methodology, rather than an exact solver that stops being available.
+
+| n (qubits) | Brute-force optimum | SA value | SA time (s) | QAOA value | QAOA feasible | QAOA converged | QAOA time (s) |
+|---|---|---|---|---|---|---|---|
+| 12 | 0.6348 | 0.6348 | 0.18 | 0.6342 | Yes | Yes | 11.6 |
+| 16 | 0.8301 | 0.8301 | 0.19 | 0.0000 | No | **No** | 14.1 |
+| 20 | 1.0506 | 1.0506 | 0.19 | 0.0000 | No | **No** | 40.0 |
+| 24 | n/a (past exact cutoff) | 1.2353 | 0.34 | 0.0000 | No | **No** | 512.8 |
+
+Simulated annealing reaches the known optimum at every size where one exists (exactly, to
+four decimal places, at n=12, 16, and 20), is feasible by construction at every size (its
+swap-based moves can never violate the cardinality constraint the way QAOA's standard
+mixer can), and runs in **under half a second at every size tested here, including n=24** -
+while QAOA goes from a near-optimal feasible answer (n=12, approximation ratio 0.9992,
+11.6s) to not converging at all for every larger size tested (n=16, 20, and 24 - the same
+near-uniform-output failure mode as the hardness sweep above), and getting dramatically
+*slower* while doing so: **512.8 seconds - over eight and a half minutes - to fail to
+converge at n=24**, against SA's 0.34 seconds to find the exact optimum's neighborhood.
+That gap, not the approximation-ratio numbers in section 7 alone, is the honest headline
+result of this whole search: at every size this project can simulate, the realistic
+classical competitor isn't just tied with QAOA on quality, it is simultaneously more
+reliable, and between roughly 60x (n=12) and over 1,500x (n=24) faster.
+
+### Bottom line
+
+Consistent with the literature review, neither experiment finds a QAOA edge - if anything,
+both make the case *against* one more strongly than section 7's benchmark alone, because
+QAOA's *reliability* (not just its speed) degrades under both harder constraints and
+larger n, while the realistic classical baseline's does not. This project does not claim,
+and the field's own most careful papers do not claim, that a QAOA advantage exists today
+for this problem at any size a laptop (or, per Yalovetzky et al.'s hardware results,
+current real quantum hardware) can reach. The honest value of having built this pipeline is
+in the pipeline itself - a correct, reproducible, statistically-characterized QAOA
+implementation ready to be pointed at whatever regime eventually matters - not in a
+computational advantage that does not exist yet at this scale.
+
+## 10. What is intentionally not built yet
 
 - **Portfolio Dashboard page (Part 2):** a reserved, blank page in the app, per the
   project instructions, to be built out in a future phase.
@@ -369,11 +502,20 @@ heatmap, and the portfolio-dynamics chart) are in the Streamlit dashboard.
   referenced as a natural extension, not implemented, since the reference paper's own
   results show QAOA performing *worse* on the HUBO version than on classical baselines,
   and adding it would not currently strengthen this project's findings.
-- **Real quantum hardware submission (IQM/Qrisp):** the sampler is swappable in
-  `engine/06_quantum_solvers/qaoa_solver.py`; not exercised in this repository since no
-  hardware token was available while building it.
+- **Real quantum hardware submission (IQM/Qrisp), executed against billed hardware time:**
+  `engine/13_hardware/iqm_hardware.py` builds the same QUBO and QAOA ansatz used everywhere
+  else and submits it via `qrisp`'s IQM Resonance backend, gated on an
+  `IQM_RESONANCE_TOKEN` environment variable exactly like the Tiingo adapters - verified to
+  correctly return `None` with no network call when the token is absent. Not run against
+  real, metered quantum-computer time as part of this project: QPU time is a shared,
+  billed resource, and per the "Is there a QAOA edge" section above, the literature itself
+  says today's hardware (tens of qubits, real per-gate error rates) is nowhere near the
+  regime (several hundred qubits, much lower error rates) where an edge would plausibly
+  appear - so a small, cheap hardware run would characterize noise, not chase an advantage.
+  The code is ready to run the moment a token is configured and someone chooses to spend
+  the quota on it.
 
-## 10. Glossary
+## 11. Glossary
 
 **Approximation ratio** - a solution's objective value divided by the true optimum's
 value (or a normalized 0-1 version); 1.0 means optimal.
@@ -435,7 +577,7 @@ characterize how a method's cost grows, independent of its absolute speed at any
 **Statevector simulator** - a classical simulation of a quantum circuit that tracks the
 exact quantum state; exact but exponential in qubit count, unlike real quantum hardware.
 
-## 11. References
+## 12. References
 
 The formulation, mixer, and statistical-methodology choices in this project were informed
 by the academic literature below. None of these papers, or the project's internal notes

@@ -31,6 +31,25 @@ runtime cost. reps > 1 extends the p=1 ramp via linear interpolation to the
 new depth, which is one of the four strategies from the same paper (their
 "re-fit linear ansatz" and "extrapolate from p-1" alternatives are not
 implemented here).
+
+Non-convergence handling: on a hard enough landscape (see stage 11's
+sector-constrained QUBOs), COBYLA's fixed iteration budget can fail to
+concentrate the sampled distribution on anything - every bitstring stays
+near the uniform 1/shots probability. qiskit-optimization 0.7.0's
+MinimumEigenOptimizer has a real bug in this exact situation: its
+`_eigenvector_to_solutions` unconditionally squares dict-valued eigenstates
+(assuming amplitude-like values), but qiskit-algorithms 0.4.0's QAOA
+returns an eigenstate dict of already-normalized probabilities through this
+sampler path - squaring an already-tiny near-uniform probability a second
+time pushes every entry below the library's fixed 1e-6 cutoff, so NO
+samples survive and MinimumEigenOptimizer crashes with an IndexError deep
+in its internals instead of returning an infeasible-but-present result.
+That crash is caught here and turned into an explicit, honestly-labelled
+non-convergence result (`converged=False`) rather than letting a real
+software bug masquerade as either a silent success or an unexplained
+pipeline crash - the near-uniform output it corresponds to is itself a
+genuine finding (QAOA's optimizer failing to learn anything on a hard
+landscape), independent of the library bug that happens to surface it.
 """
 
 from __future__ import annotations
@@ -50,12 +69,13 @@ from aer_sampler import TranspilingAerSampler
 
 @dataclass
 class QAOARunResult:
-    result: OptimizationResult
+    result: Optional[OptimizationResult]
     elapsed_s: float
     x: np.ndarray
     fval: float
     reps: int
     initial_point: np.ndarray
+    converged: bool = True
 
 
 def linear_ansatz_initial_point(
@@ -85,8 +105,22 @@ def solve_qaoa(
     qaoa = QAOA(sampler=sampler, optimizer=optimizer, reps=reps, initial_point=init_pt)
     meo = MinimumEigenOptimizer(qaoa)
 
+    n = qp.get_num_binary_vars()
     t0 = time.time()
-    result = meo.solve(qp)
+    try:
+        result = meo.solve(qp)
+    except IndexError:
+        # See the module docstring: qiskit-optimization 0.7.0's sample
+        # interpretation crashes (rather than returning an infeasible
+        # result) when QAOA's sampled distribution stays near-uniform -
+        # i.e. the classical optimizer failed to concentrate probability
+        # on anything within its iteration budget. Reported honestly as
+        # non-convergence, not silently retried or hidden.
+        elapsed = time.time() - t0
+        return QAOARunResult(
+            result=None, elapsed_s=elapsed, x=np.zeros(n), fval=float("nan"),
+            reps=reps, initial_point=init_pt, converged=False,
+        )
     elapsed = time.time() - t0
 
     return QAOARunResult(

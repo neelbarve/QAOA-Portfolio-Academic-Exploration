@@ -1,0 +1,111 @@
+{
+  "rows": [
+    {
+      "n_assets": 12,
+      "k": 6,
+      "n_sectors": 1,
+      "sector_cap": 6,
+      "bf_val": 0.6347770269742518,
+      "bf_feasible": true,
+      "bf_time_s": 0.024993181228637695,
+      "exact_qubo_val": 0.6347770269742518,
+      "exact_qubo_feasible": true,
+      "qaoa_val": 0.7953425726695996,
+      "qaoa_feasible": false,
+      "qaoa_converged": true,
+      "qaoa_time_s": 17.79706859588623,
+      "approx_ratio_qaoa": NaN,
+      "approx_ratio_exact_qubo": 1.0
+    },
+    {
+      "n_assets": 12,
+      "k": 6,
+      "n_sectors": 2,
+      "sector_cap": 3,
+      "bf_val": 0.6347770269742518,
+      "bf_feasible": true,
+      "bf_time_s": 0.02331686019897461,
+      "exact_qubo_val": 0.6347770269742518,
+      "exact_qubo_feasible": true,
+      "qaoa_val": 0.0,
+      "qaoa_feasible": false,
+      "qaoa_converged": false,
+      "qaoa_time_s": 11.052942037582397,
+      "approx_ratio_qaoa": NaN,
+      "approx_ratio_exact_qubo": 1.0
+    },
+    {
+      "n_assets": 12,
+      "k": 6,
+      "n_sectors": 3,
+      "sector_cap": 2,
+      "bf_val": 0.6347770269742518,
+      "bf_feasible": true,
+      "bf_time_s": 0.01913738250732422,
+      "exact_qubo_val": 0.6347770269742518,
+      "exact_qubo_feasible": true,
+      "qaoa_val": 0.0,
+      "qaoa_feasible": false,
+      "qaoa_converged": false,
+      "qaoa_time_s": 14.828157424926758,
+      "approx_ratio_qaoa": NaN,
+      "approx_ratio_exact_qubo": 1.0
+    },
+    {
+      "n_assets": 12,
+      "k": 6,
+      "n_sectors": 4,
+      "sector_cap": 2,
+      "bf_val": 0.6347770269742518,
+      "bf_feasible": true,
+      "bf_time_s": 0.024211406707763672,
+      "exact_qubo_val": 0.6347770269742518,
+      "exact_qubo_feasible": true,
+      "qaoa_val": 0.0,
+      "qaoa_feasible": false,
+      "qaoa_converged": false,
+      "qaoa_time_s": 26.381582260131836,
+      "approx_ratio_qaoa": NaN,
+      "approx_ratio_exact_qubo": 1.0
+    },
+    {
+      "n_assets": 12,
+      "k": 6,
+      "n_sectors": 6,
+      "sector_cap": 1,
+      "bf_val": 0.6347770269742518,
+      "bf_feasible": true,
+      "bf_time_s": 0.02263641357421875,
+      "exact_qubo_val": 0.6347770269742518,
+      "exact_qubo_feasible": true,
+      "qaoa_val": 0.6347770269742518,
+      "qaoa_feasible": true,
+      "qaoa_converged": true,
+      "qaoa_time_s": 9.292360305786133,
+      "approx_ratio_qaoa": 1.0,
+      "approx_ratio_exact_qubo": 1.0
+    }
+  ],
+  "config": {
+    "hardness_n": 12,
+    "n_sectors_list": [
+      1,
+      2,
+      3,
+      4,
+      6
+    ],
+    "extended_sizes": [
+      12,
+      16,
+      20,
+      24
+    ],
+    "exact_cutoff_n": 20,
+    "sa_iters": 6000,
+    "q": 0.5,
+    "reps": 2,
+    "seed": 42,
+    "preset": "standard"
+  }
+}

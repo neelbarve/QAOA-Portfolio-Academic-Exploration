@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Cached raw price data is reproducible from a network connection - not
+# tracked, but the folder is kept via .gitkeep so a fresh clone has the
+# expected structure. results/ (benchmark JSON + plots) IS tracked - it's
+# the project's actual reported findings, not disposable cache.
+data_cache/*
+!data_cache/.gitkeep
+
+.streamlit/secrets.toml
+*.log
+.DS_Store

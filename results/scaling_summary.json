@@ -1,0 +1,153 @@
+{
+  "per_size": {
+    "6": {
+      "n_seeds": 5,
+      "qaoa_feasible_rate": 0.8,
+      "approx_ratio_qaoa_ci": {
+        "mean": 1.0,
+        "ci_low": 1.0,
+        "ci_high": 1.0,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "approx_ratio_exact_qubo_ci": {
+        "mean": 1.0,
+        "ci_low": 1.0,
+        "ci_high": 1.0,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "qaoa_time_s_ci": {
+        "mean": 24.819204568862915,
+        "ci_low": 19.78765525817871,
+        "ci_high": 32.03089199066162,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "paired_qaoa_vs_exact": {
+        "test": "insufficient variation",
+        "statistic": NaN,
+        "p_value": NaN,
+        "n_pairs": 4,
+        "mean_difference": 0.0
+      }
+    },
+    "8": {
+      "n_seeds": 5,
+      "qaoa_feasible_rate": 1.0,
+      "approx_ratio_qaoa_ci": {
+        "mean": 1.0,
+        "ci_low": 1.0,
+        "ci_high": 1.0,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "approx_ratio_exact_qubo_ci": {
+        "mean": 1.0,
+        "ci_low": 1.0,
+        "ci_high": 1.0,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "qaoa_time_s_ci": {
+        "mean": 17.899693632125853,
+        "ci_low": 15.814812231063843,
+        "ci_high": 20.073986625671388,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "paired_qaoa_vs_exact": {
+        "test": "insufficient variation",
+        "statistic": NaN,
+        "p_value": NaN,
+        "n_pairs": 5,
+        "mean_difference": 0.0
+      }
+    },
+    "10": {
+      "n_seeds": 5,
+      "qaoa_feasible_rate": 1.0,
+      "approx_ratio_qaoa_ci": {
+        "mean": 1.0,
+        "ci_low": 1.0,
+        "ci_high": 1.0,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "approx_ratio_exact_qubo_ci": {
+        "mean": 1.0,
+        "ci_low": 1.0,
+        "ci_high": 1.0,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "qaoa_time_s_ci": {
+        "mean": 20.34040904045105,
+        "ci_low": 16.42000846862793,
+        "ci_high": 24.3953649520874,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "paired_qaoa_vs_exact": {
+        "test": "insufficient variation",
+        "statistic": NaN,
+        "p_value": NaN,
+        "n_pairs": 5,
+        "mean_difference": 0.0
+      }
+    },
+    "12": {
+      "n_seeds": 5,
+      "qaoa_feasible_rate": 0.2,
+      "approx_ratio_qaoa_ci": {
+        "mean": 0.8501229070035695,
+        "ci_low": 0.8501229070035695,
+        "ci_high": 0.8501229070035695,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "approx_ratio_exact_qubo_ci": {
+        "mean": 1.0,
+        "ci_low": 1.0,
+        "ci_high": 1.0,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "qaoa_time_s_ci": {
+        "mean": 18.520719480514526,
+        "ci_low": 16.61610598564148,
+        "ci_high": 20.68160605430603,
+        "confidence": 0.95,
+        "n_resamples": 10000
+      },
+      "paired_qaoa_vs_exact": {
+        "test": "insufficient variation",
+        "statistic": NaN,
+        "p_value": NaN,
+        "n_pairs": 1,
+        "mean_difference": -0.14987709299643048
+      }
+    }
+  },
+  "qaoa_time_scaling_fit": {
+    "slope": -0.054126820360714235,
+    "slope_se": 0.04354950195795124,
+    "intercept": 4.825289630709346,
+    "r_squared": 0.4357855664541124,
+    "p_value": 0.3398594343216648,
+    "n_points": 4
+  },
+  "brute_force_time_scaling_fit": {
+    "slope": 0.8339866678602779,
+    "slope_se": 0.03934396801527453,
+    "intercept": -15.815217429418684,
+    "r_squared": 0.9955686169291873,
+    "p_value": 0.0022181516337415044,
+    "n_points": 4
+  },
+  "slope_difference_test": {
+    "delta_slope": -0.8881134882209921,
+    "t_statistic": -15.13229969512305,
+    "p_value": 0.00011117117390702091
+  }
+}

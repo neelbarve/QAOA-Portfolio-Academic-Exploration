@@ -1,0 +1,26 @@
+# Core numerical / data
+numpy>=2.4
+pandas>=2.3
+scipy>=1.17
+statsmodels>=0.14
+requests>=2.32
+
+# Classical optimization
+cvxpy>=1.9
+
+# Quantum: QAOA + portfolio-optimization QUBO
+qiskit>=2.1
+qiskit-aer>=0.17
+qiskit-algorithms>=0.4
+qiskit-optimization>=0.7
+qiskit-finance>=0.4
+
+# Data sources
+yfinance>=1.5
+
+# Dashboard
+streamlit>=1.55
+plotly>=5.24
+
+# Optional: real IQM quantum hardware access (Qrisp), per project instructions
+qrisp>=0.8

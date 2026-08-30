@@ -114,34 +114,50 @@ diagram rather than source text.
 
 ```mermaid
 flowchart TD
-    subgraph S1["01-03: Data, preprocessing, EDA"]
-        A["RunConfig: engine, n_assets, budget k,<br/>dates, return_freq, risk_factor"] --> B["01: Adapter fetch<br/>Tiingo -> CoinGecko/yfinance -> Binance/Stooq"]
-        B --> C[("data_cache/: raw prices")]
-        B --> D["02: Preprocessing<br/>drop irrelevant cols, drop 35%+ missing,<br/>impute median/mean/mode"]
-        D --> E["03: EDA<br/>summary stats, correlations,<br/>QAOA-hardness proxy"]
-        E --> F[["mu, Sigma"]]
+    subgraph S1["01 to 03: Data, preprocessing, EDA"]
+        A["RunConfig: engine, n_assets, budget k,<br/>dates, return_freq, risk_factor"]
+        B["01: Adapter fetch<br/>Tiingo, CoinGecko, yfinance,<br/>Binance, Stooq"]
+        C(("cached raw prices"))
+        D["02: Preprocessing<br/>drop irrelevant columns,<br/>drop columns 35 percent or more missing,<br/>impute median, mean, or mode"]
+        E["03: EDA<br/>summary stats, correlations,<br/>QAOA hardness proxy"]
+        F[["mu, Sigma"]]
+        A --> B
+        B --> C
+        B --> D
+        D --> E
+        E --> F
     end
 
-    subgraph S2["04-07: Classical and quantum solve"]
-        F --> G["04: Classical formulation<br/>brute force exact + CVXPY relaxation"]
-        F --> H["05: QUBO<br/>qiskit-finance auto-build +<br/>by-hand Ising derivation"]
-        N["10: Fama-French<br/>Ken French factors -> OLS -> mu_FF, Sigma_FF"] -. alternate source .-> H
-        H --> I["06: Quantum solvers<br/>QAOA (Aer, COBYLA) + exact-QUBO control"]
-        G --> J["07: Comparison<br/>4-way result bundle"]
+    subgraph S2["04 to 07: Classical and quantum solve"]
+        G["04: Classical formulation<br/>brute force exact plus CVXPY relaxation"]
+        H["05: QUBO<br/>qiskit-finance auto-build plus<br/>by-hand Ising derivation"]
+        I["06: Quantum solvers<br/>QAOA on Aer with COBYLA,<br/>plus exact-QUBO control"]
+        J["07: Comparison<br/>four way result bundle"]
+        H --> I
+        G --> J
         I --> J
     end
 
-    subgraph S3["08-09: Scaling and statistics"]
-        J --> K["08: Multi-seed, multi-size<br/>scaling benchmark"]
-        K --> L["09: Bootstrap CIs, scaling-exponent fit,<br/>paired significance tests"]
+    subgraph S3["08 to 09: Scaling and statistics"]
+        K["08: Multi-seed, multi-size<br/>scaling benchmark"]
+        L["09: Bootstrap confidence intervals,<br/>scaling exponent fit,<br/>paired significance tests"]
+        K --> L
     end
 
     subgraph S4["Streamlit dashboard"]
-        J --> M["Academic page:<br/>Run and Results / Scaling Benchmark /<br/>Fama-French to Hamiltonian /<br/>Sanity Checks / Portfolio Dynamics"]
-        L --> M
-        N -.-> M
-        P["Portfolio Dashboard page<br/>(Part 2, reserved, blank)"]
+        M["Academic page:<br/>Run and Results, Scaling Benchmark,<br/>Fama-French to Hamiltonian,<br/>Sanity Checks, Portfolio Dynamics"]
+        P["Portfolio Dashboard page<br/>Part 2, reserved, blank"]
     end
+
+    N["10: Fama-French<br/>Ken French factors, OLS regression,<br/>mu_FF and Sigma_FF"]
+
+    F --> G
+    F --> H
+    N -.-> H
+    J --> K
+    J --> M
+    L --> M
+    N -.-> M
 ```
 
 ### Repository layout

@@ -54,14 +54,24 @@ class HardwareRunResult:
     shots: int
     elapsed_s: float
     counts: Dict[str, int]              # raw bitstring -> shot count
-    best_bitstring: str
+    best_bitstring: str                 # single MOST FREQUENT bitstring - can be infeasible
     best_feasible: bool
     best_value: float
+    # A single most-frequent bitstring understates what noisy real hardware
+    # output actually carries (Yalovetzky et al. 2026 make exactly this
+    # point about marginal probability mass): these three fields answer
+    # "if you post-select the shots for feasibility, what does the FULL
+    # distribution show", not just "what was sampled most often".
+    feasible_shot_fraction: float       # fraction of all shots with sum(x) = k
+    best_feasible_value: Optional[float]     # best objective among any feasible shot
+    best_feasible_bitstring: Optional[str]
+    true_optimum_shot_fraction: Optional[float]  # fraction of shots matching a KNOWN optimal selection, if provided
 
 
 def run_qaoa_on_iqm_hardware(
     mu: np.ndarray, sigma: np.ndarray, k: int, q: float,
     reps: int = 1, shots: int = 1000, device_instance: str = DEFAULT_DEVICE_INSTANCE,
+    known_optimal_selection: Optional[frozenset] = None,
 ) -> Optional[HardwareRunResult]:
     """Builds the SAME QUBO (stage 05) and the SAME linear-ramp QAOA circuit
     construction (stage 06's ansatz choice) used everywhere else in this
@@ -69,6 +79,11 @@ def run_qaoa_on_iqm_hardware(
     instead of Aer. Returns None immediately (no network call, no cost) if
     IQM_RESONANCE_TOKEN isn't set - callers must check iqm_available() or
     handle a None return, exactly like the Tiingo adapters do.
+
+    known_optimal_selection: pass brute_force_exact(...).selection (as a
+    set) if the caller already has it, to also report what fraction of
+    shots landed exactly on the true optimum - optional because it's only
+    knowable at the small n a real-hardware comparison is run at anyway.
 
     Deliberately capped defaults (reps=1, shots=1000, small n expected from
     the caller) - real QPU time is a shared, metered resource, unlike the
@@ -80,7 +95,7 @@ def run_qaoa_on_iqm_hardware(
         IntegerToBinary, LinearEqualityToPenalty,
     )
     from qiskit.circuit.library import QAOAAnsatz
-    from qiskit.quantum_info import SparsePauliOp
+    from qrisp import QuantumCircuit as QrispQuantumCircuit
     from qrisp.interface import IQMBackend
 
     from qiskit_qubo import build_qubo
@@ -102,18 +117,46 @@ def run_qaoa_on_iqm_hardware(
         api_token=os.environ["IQM_RESONANCE_TOKEN"], device_instance=device_instance,
     )
 
+    # qrisp's IQMBackend expects ITS OWN QuantumCircuit wrapper (it calls
+    # .to_qiskit() internally during transpilation) - passing a raw Qiskit
+    # circuit directly raises AttributeError before any network call is
+    # made, i.e. before any real hardware time is spent. Converting first,
+    # exactly as the reference notebook does
+    # (QuantumCircuit.from_qiskit(...).run(backend=..., shots=...)).
+    qrisp_circuit = QrispQuantumCircuit.from_qiskit(bound_circuit)
+
     t0 = time.time()
-    job_result = backend.run(bound_circuit, shots=shots)
+    job_result = qrisp_circuit.run(backend=backend, shots=shots)
     elapsed = time.time() - t0
 
     counts: Dict[str, int] = dict(job_result)
+    total_shots = sum(counts.values())
     best_bitstring = max(counts, key=counts.get)
     x = np.array([int(b) for b in best_bitstring[::-1][:n]])
     best_feasible = bool(np.isclose(x.sum(), k))
     best_value = objective(mu, sigma, x, q)
 
+    feasible_shots = 0
+    optimal_shots = 0
+    best_feasible_value: Optional[float] = None
+    best_feasible_bitstring: Optional[str] = None
+    for bitstring, cnt in counts.items():
+        xb = np.array([int(b) for b in bitstring[::-1][:n]])
+        if int(xb.sum()) != k:
+            continue
+        feasible_shots += cnt
+        val = objective(mu, sigma, xb, q)
+        if best_feasible_value is None or val > best_feasible_value:
+            best_feasible_value, best_feasible_bitstring = val, bitstring
+        if known_optimal_selection is not None and set(np.flatnonzero(xb).tolist()) == set(known_optimal_selection):
+            optimal_shots += cnt
+
     return HardwareRunResult(
         device_instance=device_instance, n_qubits=operator.num_qubits, shots=shots,
         elapsed_s=elapsed, counts=counts, best_bitstring=best_bitstring,
         best_feasible=best_feasible, best_value=best_value,
+        feasible_shot_fraction=feasible_shots / total_shots if total_shots else 0.0,
+        best_feasible_value=best_feasible_value, best_feasible_bitstring=best_feasible_bitstring,
+        true_optimum_shot_fraction=(optimal_shots / total_shots if total_shots else 0.0)
+        if known_optimal_selection is not None else None,
     )

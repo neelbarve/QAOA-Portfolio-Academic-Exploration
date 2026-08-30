@@ -594,6 +594,55 @@ Full citations in the README's References section.
         )
 
     st.divider()
+    st.markdown("### Real hardware, once (stage 13)")
+    st.caption(
+        "Everything above runs on Aer's noiseless simulator. This is the one deliberate "
+        "exception - a single, small, cheap job actually submitted to real IQM Garnet "
+        "hardware (20 qubits), connection validated for free first (no shots, no cost) "
+        "before spending any real quota."
+    )
+    hw_path = RESULTS_DIR / "iqm_hardware_comparison.json"
+    if not hw_path.exists():
+        st.warning(
+            "No real-hardware run yet. Requires IQM_RESONANCE_TOKEN to be set, then:\n\n"
+            "`python scripts/run_iqm_hardware_comparison.py --n-assets 4 --shots 1000`"
+        )
+    else:
+        with open(hw_path) as f:
+            hw = json.load(f)
+        cfg, bf_val = hw["config"], hw["bf_val"]
+        sim_s, sim_w, real = hw["sim_standard"], hw["sim_warm_start"], hw["hardware"]
+
+        cols = st.columns(3)
+        cols[0].metric("Simulator, standard mixer", f"{sim_s['val']:.4f}",
+                        "exact optimum" if sim_s["feasible"] else "infeasible")
+        cols[1].metric("Simulator, warm-start mixer", f"{sim_w['val']:.4f}",
+                        "exact optimum" if sim_w["feasible"] else "infeasible")
+        cols[2].metric(f"Real {cfg['device_instance']} hardware (top bitstring)", f"{real['val']:.4f}",
+                        "infeasible" if not real["feasible"] else "feasible")
+        st.caption(f"n={cfg['n_assets']}, k={cfg['k']}, reps={cfg['reps']}, shots={cfg['shots']} - "
+                   f"true optimum (brute force) = {bf_val:.4f}")
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Shots that were feasible at all", f"{real['feasible_shot_fraction']*100:.1f}%")
+        c2.metric("Shots landing on the EXACT optimum", f"{real['true_optimum_shot_fraction']*100:.1f}%")
+        c3.metric("Best value among feasible shots", f"{real['best_feasible_value']:.4f}")
+
+        st.info(
+            "The single most-sampled bitstring on real hardware was infeasible - it would "
+            "look like a flat failure if that were the whole story. But post-selecting for "
+            "feasibility (the way a real user of this pipeline would) tells a richer story: "
+            "the exact true-optimal bitstring WAS sampled, just as a small minority of shots, "
+            "and the best feasible shot found matches the true optimum exactly. This is the "
+            "same pattern Yalovetzky et al. (2026) report on much larger real trapped-ion "
+            "hardware - noisy output rarely samples the right answer as its dominant mode, "
+            "but the signal is still recoverable. One small, cheap run cannot establish a "
+            "trend on its own, and no larger claim is made from it - see the README's "
+            "'Real hardware, once' subsection for the full writeup.",
+            icon="🔬",
+        )
+
+    st.divider()
     st.markdown(
         "**Bottom line:** consistent with the literature review above, none of these experiments "
         "find a QAOA edge over classical methods - SA remains both more reliable and dramatically "

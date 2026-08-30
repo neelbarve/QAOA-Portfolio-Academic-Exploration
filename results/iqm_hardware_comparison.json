@@ -1,0 +1,79 @@
+{
+  "config": {
+    "n_assets": 4,
+    "k": 2,
+    "q": 0.5,
+    "seed": 42,
+    "reps": 1,
+    "shots": 1000,
+    "device_instance": "garnet"
+  },
+  "bf_val": 0.23184440913953422,
+  "bf_selection": [
+    2,
+    3
+  ],
+  "sim_standard": {
+    "val": 0.23184440913953422,
+    "feasible": true,
+    "converged": true,
+    "elapsed_s": 13.231128215789795
+  },
+  "sim_warm_start": {
+    "val": 0.23184440913953422,
+    "feasible": true,
+    "converged": true,
+    "elapsed_s": 4.772097826004028
+  },
+  "hardware": {
+    "val": 0.0,
+    "feasible": false,
+    "best_bitstring": "0000",
+    "n_qubits": 4,
+    "elapsed_s": 8.390319347381592,
+    "counts": {
+      "1010": 30,
+      "0000": 226,
+      "0001": 95,
+      "0011": 28,
+      "1011": 78,
+      "0100": 46,
+      "0010": 86,
+      "1000": 59,
+      "1110": 49,
+      "0110": 18,
+      "1100": 15,
+      "1111": 122,
+      "0111": 51,
+      "1101": 56,
+      "0101": 14,
+      "1001": 27
+    },
+    "top5": [
+      [
+        "0000",
+        226
+      ],
+      [
+        "1111",
+        122
+      ],
+      [
+        "0001",
+        95
+      ],
+      [
+        "0010",
+        86
+      ],
+      [
+        "1011",
+        78
+      ]
+    ],
+    "feasible_shot_fraction": 0.132,
+    "true_optimum_shot_fraction": 0.015,
+    "best_feasible_value": 0.23184440913953422,
+    "best_feasible_bitstring": "1100"
+  }
+}

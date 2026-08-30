@@ -272,12 +272,15 @@ function regardless of which engine is chosen.
 Stated explicitly, since an assumption left implicit is the easiest thing for a reader to
 get wrong:
 
-1. **Simulator, not hardware, for every number reported in this README.** All QAOA runs
-   quoted here use Aer's noiseless statevector simulator - no noise model, no real quantum
-   backend, no shot-noise-only sampling. A real-hardware path exists
-   (`engine/13_hardware/iqm_hardware.py`, via `qrisp`'s IQM Resonance backend) and was
-   verified to correctly no-op when no token is configured, but was not exercised against
-   billed hardware time as part of this project - see section 9 for why.
+1. **Simulator, not hardware, for the scaling/statistics results in sections 7-9.** All the
+   multi-seed benchmark numbers in this README use Aer's noiseless statevector simulator -
+   no noise model, no real quantum backend, no shot-noise-only sampling. A real-hardware
+   path exists (`engine/13_hardware/iqm_hardware.py`, via `qrisp`'s IQM Resonance backend)
+   and WAS exercised, once, deliberately, against real billed hardware time (IQM Garnet,
+   20 qubits, n=4) - see section 9's "Real hardware, once" subsection for the result. It
+   remains a single, small, cheap characterization run, not a repeated or scaled-up part of
+   the statistical benchmarking above, because real QPU time is a shared, metered resource
+   unlike the free simulator everywhere else in this project.
 2. **Selection, not weighting.** The optimizer chooses *which* k assets to hold, all with
    equal weight in this project; it does not solve for continuous portfolio weights. The
    "Portfolio Dynamics" dashboard tab is explicitly labeled illustrative for this reason.
@@ -577,6 +580,54 @@ occasionally counterproductive. That's a meaningfully different, more honest fin
 either "warm-starting speeds up SA" or "warm-starting doesn't help SA" would have been on
 their own.
 
+### Real hardware, once
+
+Everything above runs on Aer's noiseless statevector simulator. Section 6's assumptions
+list this as a limitation; here it's addressed directly, once, deliberately, rather than
+left as an unexercised code path. With an `IQM_RESONANCE_TOKEN` configured, the connection
+was first validated for free (`IQMClient.get_about` / `get_health` /
+`get_static_quantum_architecture` - metadata calls, no shots, no cost): IQM Garnet, 20
+qubits, online and healthy. Then one real, metered job was submitted -
+`scripts/run_iqm_hardware_comparison.py`, n=4 (k=2, the smallest, cheapest instance this
+project's ansatz can meaningfully test), reps=1, 1,000 shots - the same small-and-cheap
+philosophy as the summer-school notebook this project's instructions point to, not a
+scaled-up sweep.
+
+Building this surfaced one real bug worth naming: `qrisp`'s `IQMBackend` expects `qrisp`'s
+own `QuantumCircuit` wrapper (it calls `.to_qiskit()` on it internally during
+transpilation), not a raw Qiskit circuit - passing one directly raises `AttributeError`
+*before* any network call happens, so the fix (`QuantumCircuit.from_qiskit(...)` first,
+matching the reference notebook's own pattern) cost no wasted hardware time to find.
+
+| | Simulator, standard mixer | Simulator, warm-start mixer | Real IQM Garnet hardware |
+|---|---|---|---|
+| Best/top-sampled value | 0.2318 (exact optimum) | 0.2318 (exact optimum) | 0.0000 (top bitstring infeasible) |
+| Feasible? | Yes | Yes | Top bitstring: No |
+| Wall-clock | 13.2s | 4.8s | 8.4s |
+
+True optimum (brute force): **0.2318**, selection `{2, 3}`. On real hardware, the single
+most-sampled bitstring (`0000`, 22.6% of 1,000 shots) is infeasible - it doesn't even
+select 2 assets - which would look like a flat failure if that were the whole story.
+Looking at the full shot distribution instead of just the top bitstring (post-selecting for
+feasibility, the way a real user of this pipeline would):
+
+- **Only 13.2% of all 1,000 shots were feasible** (`sum(x) = k = 2`) at all - noise moves
+  most of the probability mass off the constraint entirely, not just onto a suboptimal-
+  but-valid answer.
+- **The exact true-optimal bitstring (`1100`, selection `{2, 3}`) WAS sampled** - 15 times
+  out of 1,000 (1.5%) - just nowhere near the top.
+- **Restricted to the feasible 13.2% of shots, the single best one found is the exact true
+  optimum**, 0.2318, matching brute force and both simulator runs exactly.
+
+This is precisely the pattern Yalovetzky et al. (2026) report on much larger real
+trapped-ion hardware runs (see section 9's literature review above): raw noisy output
+rarely samples the exact right answer as its dominant mode, but the signal is still there,
+recoverable by post-selecting for feasibility rather than trusting the single most-frequent
+bitstring. It is a data point about **noise characterization**, consistent with, not
+contradicting, this section's central finding - one very small, cheap run does not and
+cannot establish a hardware-vs-simulator trend on its own, and no larger claim is made from
+it. Full shot counts in `results/iqm_hardware_comparison.json`.
+
 ### A genuine classical-side improvement too
 
 Separately from anything QAOA-related: `brute_force_exact`'s per-subset Python loop
@@ -616,10 +667,15 @@ answer one size further (n=20) where it previously produced nothing. Warm-starti
 completeness, showed the asymmetry isn't automatic: it helps QAOA by giving its optimizer
 a real head start on a search it was otherwise failing outright, while for SA - already
 strong - it mostly just skips a search it would have won anyway, and is a wash or slightly
-worse in the minority of cases where a search still happens. The honest picture is
+worse in the minority of cases where a search still happens. And the one real-hardware run
+performed - deliberately small, one-off, not a sweep - reproduced in miniature exactly what
+the largest real-hardware paper in the literature review found: noisy output rarely samples
+the true answer as its dominant mode, but the signal is still recoverable by
+post-selecting for feasibility, not evidence of an edge either way. The honest picture is
 layered, not a single verdict: no quantum advantage exists at this scale, QAOA-the-algorithm
 still has real, fixable headroom within that scale, the same fix does not generalize
-automatically to a method that did not need fixing, and the classical baseline itself got
+automatically to a method that did not need fixing, real hardware behaves the way the
+literature predicts it should at this size, and the classical baseline itself got
 measurably faster too, on a completely independent axis. The value of having built this
 pipeline is in the pipeline itself - a correct, reproducible, statistically-characterized,
 and now demonstrably improvable QAOA implementation, ready to be pointed at whatever
@@ -638,18 +694,16 @@ this scale.
   referenced as a natural extension, not implemented, since the reference paper's own
   results show QAOA performing *worse* on the HUBO version than on classical baselines,
   and adding it would not currently strengthen this project's findings.
-- **Real quantum hardware submission (IQM/Qrisp), executed against billed hardware time:**
-  `engine/13_hardware/iqm_hardware.py` builds the same QUBO and QAOA ansatz used everywhere
-  else and submits it via `qrisp`'s IQM Resonance backend, gated on an
-  `IQM_RESONANCE_TOKEN` environment variable exactly like the Tiingo adapters - verified to
-  correctly return `None` with no network call when the token is absent. Not run against
-  real, metered quantum-computer time as part of this project: QPU time is a shared,
-  billed resource, and per the "Is there a QAOA edge" section above, the literature itself
-  says today's hardware (tens of qubits, real per-gate error rates) is nowhere near the
-  regime (several hundred qubits, much lower error rates) where an edge would plausibly
-  appear - so a small, cheap hardware run would characterize noise, not chase an advantage.
-  The code is ready to run the moment a token is configured and someone chooses to spend
-  the quota on it.
+- **A repeated/scaled-up real-hardware study.** `engine/13_hardware/iqm_hardware.py` was
+  run once, deliberately, against real IQM Garnet hardware at a small, cheap size (n=4) -
+  see section 9's "Real hardware, once" subsection for the result. A larger sweep (more
+  sizes, more shots, multiple seeds, comparing hardware-vs-simulator the way section 7-9
+  compare QAOA-vs-classical) was not attempted: QPU time is a shared, billed resource, and
+  per the literature review in section 9, today's hardware (tens of qubits, real per-gate
+  error rates) is nowhere near the regime (several hundred qubits, much lower error rates)
+  where an edge would plausibly appear - so more hardware time would sharpen the
+  noise-characterization picture, not change the "no edge" conclusion. The code accepts
+  larger n and more shots the moment someone chooses to spend the quota on it.
 
 ## 11. Glossary
 

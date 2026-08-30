@@ -13,3 +13,35 @@ data_cache/*
 .streamlit/secrets.toml
 *.log
 .DS_Store
+
+# --- Defensive exclusions: this repo is scoped to the engine only. ---
+# The reference papers, links, and the sibling qaoa_v1 / qaoa_v1_update1 /
+# dataset folders it was built from all live one level up in qaoa_v2/, so
+# they are outside this repo's working tree by construction and can never
+# be committed by an ordinary `git add`. These patterns are a second,
+# explicit layer of protection in case any such file is ever copied INTO
+# this folder by mistake - none currently are (checked and tracked-file
+# list below verified clean before the first push).
+*.pdf
+*.docx
+*.doc
+papers/
+qaoa_papers/
+*reference_link*
+*reference_links*
+links.txt
+Gemini_search*
+data_requirements.txt
+data_adapter.txt
+qaoa_v1/
+qaoa_v1_update1/
+qaoa_Instructions*
+*.ipynb
+~$*
+
+# Never commit credentials or secrets, even accidentally.
+.env
+.env.*
+*.key
+*_token*
+*credentials*

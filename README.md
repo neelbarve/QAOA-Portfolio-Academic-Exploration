@@ -369,3 +369,61 @@ characterize how a method's cost grows, independent of its absolute speed at any
 
 **Statevector simulator** - a classical simulation of a quantum circuit that tracks the
 exact quantum state; exact but exponential in qubit count, unlike real quantum hardware.
+
+## 11. References
+
+The formulation, mixer, and statistical-methodology choices in this project were informed
+by the academic literature below. None of these papers, or the project's internal notes
+about them, are redistributed in this repository (no PDFs, no local copies, no scraped
+excerpts) - only their published bibliographic details, which are public information,
+are cited here, as is standard academic practice.
+
+### Academic papers
+
+1. Yalovetzky, R., Schuetz, S. J., He, Y., Shen, Y., Sun, X., Raymond, R., et al. (2026).
+   *Quantum-Informed Portfolio Selection: An End-to-End Pipeline Validated on Trapped-Ion
+   Hardware with Real Market Data.* arXiv:2607.01037.
+2. Aggarwal, P., Agarwal, N., Shrivastava, A., & Kler, R. (2025). *Bridging Quantum
+   Algorithms and Classical Finance: Portfolio Optimization Using QAOA and QUBO Framework.*
+   Proceedings of the IEEE UPWIECON 2025 conference.
+3. Turan, N. (2024). *Numerical Analysis of QAOA for Financial Optimization.*
+4. Uotila, V., Ripatti, A., & Zhao, Z. (2025). *Higher-Order Portfolio Optimization with
+   Quantum Approximate Optimization Algorithm.* Proceedings of IEEE Quantum Week (QCE) 2025.
+   Reference implementation: github.com/valterUo/quantum-portfolio.
+5. Brandhofer, S., Braun, D., Dehn, V., Hellstern, G., Huls, M., Ji, Y., Polian, I.,
+   Bhatia, A. S., & Wellens, T. (2023). *Benchmarking the performance of portfolio
+   optimization with QAOA.* Quantum Information Processing, 22(1), 25.
+   https://doi.org/10.1007/s11128-022-03766-5
+6. Fama, E. F., & French, K. R. (1993). *Common risk factors in the returns on stocks and
+   bonds.* Journal of Financial Economics, 33(1), 3-56.
+7. Farhi, E., Goldstone, J., & Gutmann, S. (2014). *A Quantum Approximate Optimization
+   Algorithm.* arXiv:1411.4028. (Original QAOA paper; the alternating cost/mixer ansatz
+   used throughout this project's stage 06 follows this construction.)
+8. Hadfield, S., Wang, Z., O'Gorman, B., Rieffel, E. G., Venturelli, D., & Biswas, R.
+   (2019). *From the Quantum Approximate Optimization Algorithm to a Quantum Alternating
+   Operator Ansatz.* Algorithms, 12(2), 34. (Background for the hard-constraint XY-mixer
+   design space discussed, but not implemented, on the academic dashboard page.)
+9. Lucas, A. (2014). *Ising formulations of many NP problems.* Frontiers in Physics, 2, 5.
+   (Background for the binary/logarithmic encoding referenced in the HUBO discussion.)
+10. IQM Quantum Computers. *Quantum Summer School 2026, Day 2: Variational Quantum
+    Algorithms (QAOA and MaxCut)* - internal educational course material, used only as a
+    pedagogical reference for explaining QAOA's cost/mixer structure; not reproduced here.
+
+### Data sources
+
+- Ken French Data Library, Tuck School of Business, Dartmouth College (Fama-French factor
+  returns) - https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html
+- CoinGecko API (crypto market data) - https://www.coingecko.com/en/api
+- Binance public market data API - https://www.binance.com and https://www.binance.us
+- Tiingo (equity and crypto end-of-day data) - https://www.tiingo.com
+- Yahoo Finance, via the `yfinance` library (equity price history)
+- Stooq (equity price history fallback) - https://stooq.com
+
+### Software
+
+- Qiskit, Qiskit Aer, Qiskit Algorithms, Qiskit Optimization, and Qiskit Finance (IBM
+  Quantum) - https://www.ibm.com/quantum/qiskit
+- CVXPY (Diamond & Boyd, 2016, *CVXPY: A Python-Embedded Modeling Language for Convex
+  Optimization*, Journal of Machine Learning Research)
+- Qrisp (optional path to IQM hardware) - https://www.qrisp.eu
+- NumPy, pandas, SciPy, statsmodels, Streamlit, Plotly, matplotlib

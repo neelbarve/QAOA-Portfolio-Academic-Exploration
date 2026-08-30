@@ -7,7 +7,6 @@ requests>=2.32
 
 # Classical optimization
 cvxpy>=1.9
-scikit-learn>=1.6   # Part 2: Ledoit-Wolf shrinkage covariance
 
 # Quantum: QAOA + portfolio-optimization QUBO
 qiskit>=2.1
@@ -22,8 +21,6 @@ yfinance>=1.5
 # Dashboard
 streamlit>=1.55
 plotly>=5.24
-matplotlib>=3.10   # Part 2: static PNG chart export (plotly's kaleido export was unreliable
-                    # in this project's dev environment - see portfolio_page.py's docstring)
 
 # Optional: real IQM quantum hardware access (Qrisp), per project instructions
 qrisp>=0.8

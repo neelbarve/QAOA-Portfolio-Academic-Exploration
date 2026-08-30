@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import time
 from datetime import date
-from typing import Dict, List
+from typing import List
 
 import pandas as pd
 import requests
@@ -60,34 +60,8 @@ _COINGECKO_TO_BINANCE = {
 }
 
 
-# Crypto doesn't have GICS-style sectors, but informal groupings are
-# real and useful for the portfolio dashboard's "select a sector" dropdown
-# to behave consistently across engines. Restricted to coins already
-# mapped in _COINGECKO_TO_TIINGO / _COINGECKO_TO_BINANCE above, so every
-# entry here is guaranteed fetchable through the same source chain, not
-# just listed on CoinGecko.
-SECTOR_UNIVERSES: Dict[str, List[str]] = {
-    "layer1": ["bitcoin", "ethereum", "solana", "cardano", "avalanche-2", "polkadot", "tron"],
-    "payments_stable_adjacent": ["ripple", "litecoin", "tether", "usd-coin"],
-    "defi_infra": ["chainlink", "avalanche-2", "polkadot", "solana"],
-    "meme": ["dogecoin", "shiba-inu"],
-    "diversified": [
-        "bitcoin", "ethereum", "binancecoin", "solana", "ripple", "usd-coin",
-        "dogecoin", "cardano", "tron", "avalanche-2",
-    ],
-}
-
-
 class CryptoAdapter(AssetUniverseAdapter):
     trading_days_per_year = 365
-
-    def sector_universe(self, sector: str, n: int) -> List[str]:
-        """Same contract as EquityAdapter.sector_universe() - lets the
-        portfolio dashboard's sector dropdown work identically regardless
-        of which engine is selected."""
-        if sector not in SECTOR_UNIVERSES:
-            raise ValueError(f"Unknown sector '{sector}'. Choices: {sorted(SECTOR_UNIVERSES)}")
-        return SECTOR_UNIVERSES[sector][:n]
 
     def default_universe(self, n: int) -> List[str]:
         """Top-n coins by market cap, via CoinGecko (works even without a

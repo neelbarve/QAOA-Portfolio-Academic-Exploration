@@ -686,6 +686,19 @@ this scale.
 
 - **Portfolio Dashboard page (Part 2):** a reserved, blank page in the app, per the
   project instructions, to be built out in a future phase.
+- **FnO (futures & options) as an asset class**, in this project and in Part 2: real
+  futures/options data (strikes, expiries, Greeks, continuous-contract rollover) is not
+  freely available for NSE, and would be a fundamentally different, much larger build
+  than the mu/Sigma-driven cardinality selection this whole project is built around.
+  There is a second, independent reason beyond data availability, worth stating even
+  here: this project's mean-variance formulation assumes each asset is a linear,
+  buy-and-hold position, which is a reasonable approximation for **futures** (leveraged
+  but still linear exposure to the underlying) but not for **options** - an option's
+  payoff is nonlinear and it expires, so "expected return and variance of holding this
+  option for the period" is not a well-defined question the way it is for a stock.
+  Extending to options would need a genuinely different formulation (Greeks-based risk,
+  or modeling the payoff distribution directly), not a parameter change to the existing
+  QUBO. See Part 2's README (`README_portfolio.md`, assumption 8) for the full note.
 - **Hard-constraint XY-mixers** (Dicke-state ring / full / QAMPA variants, per Brandhofer
   et al. 2023): documented as a benchmarked design space on the academic page, not
   implemented, since they require a separate Dicke-state preparation circuit and the

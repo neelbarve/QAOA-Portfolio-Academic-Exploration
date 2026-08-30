@@ -262,6 +262,22 @@ flowchart TD
    different, much larger build than the mu/Sigma-driven selection this project is built
    around. Crypto and equity only.
 
+   **A further caveat specific to F&O, independent of the data-availability problem
+   above**: even with data in hand, this project's mean-variance formulation as coded
+   assumes each asset is a linear, buy-and-hold position - a fixed quantity held for the
+   period, whose return is just the underlying's return. That is a reasonable
+   approximation for **futures** (a leveraged but still linear exposure to the
+   underlying). It is **not** a good model for **options**: an option's payoff is
+   nonlinear in the underlying's price (and path-dependent near expiry via time decay),
+   and it expires - so "the expected return and variance of holding this option for the
+   period," the two numbers the entire solver core is built around, is not even a
+   well-defined question the way it is for a stock or a future. Extending this project to
+   options would need a different formulation entirely (Greeks-based risk measures like
+   delta/vega/theta exposure, or modeling the option's payoff distribution directly,
+   e.g. via Monte Carlo over the underlying) - not a parameter change to the existing
+   QUBO. Flagged here explicitly rather than left implicit, since it is exactly the kind
+   of honest scope-limiting note the rest of this project already holds itself to.
+
 ## 7. Necessary results
 
 Two real runs (`scripts/run_portfolio_examples.py`, raw JSON in `portfolio_results/`),
@@ -324,7 +340,9 @@ equal-weight-of-every-available-asset baseline, not QAOA vs. classical.
 
 ## 9. What is intentionally not built
 
-- **FnO (futures/options) engine** - see assumption 8. Crypto and equity only.
+- **FnO (futures/options) engine** - see assumption 8 (data availability), and its
+  attached caveat (options specifically would also need a non-linear-payoff
+  formulation, not just data). Crypto and equity only.
 - **Parametric (Gaussian) VaR as an alternative to historical VaR** - historical/empirical
   VaR was chosen as the primary, more defensible method (section 5); a parametric
   cross-check was considered but not added, to avoid two risk numbers on one dashboard

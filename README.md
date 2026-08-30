@@ -276,10 +276,10 @@ approximation ratio **1.0000**, in 44.9 seconds.
 
 | n (qubits) | QAOA feasible rate | QAOA approx. ratio (feasible seeds) | Exact-QUBO approx. ratio | Mean QAOA time (s) | Mean brute-force time (s) |
 |---|---|---|---|---|---|
-| 6  | 4/5 (80%)  | 1.0000 | 1.0000 | 24.8 | 0.0005 |
-| 8  | 5/5 (100%) | 1.0000 | 1.0000 | 17.9 | 0.0009 |
-| 10 | 5/5 (100%) | 1.0000 | 1.0000 | 20.3 | 0.0042 |
-| 12 | 1/5 (20%)  | 0.8501 | 1.0000 | 18.5 | 0.0125 |
+| 6  | 4/5 (80%)  | 1.0000 | 1.0000 | 19.5 | 0.0005 |
+| 8  | 5/5 (100%) | 1.0000 | 1.0000 | 13.0 | 0.0013 |
+| 10 | 5/5 (100%) | 1.0000 | 1.0000 | 18.7 | 0.0056 |
+| 12 | 1/5 (20%)  | 0.8501 | 1.0000 | 20.6 | 0.0239 |
 
 The exact-QUBO control hits the true optimum at every size, every seed: the QUBO
 *formulation* is correct throughout. QAOA's feasibility rate collapses at n = 12 while
@@ -289,21 +289,29 @@ unsolvable. This reproduces, and now statistically confirms across multiple rand
 instances, the exact failure mode the earlier pilot study (`qaoa_v1/REPORT.md`) first
 found anecdotally at a single seed.
 
+The benchmark was re-run in full (`scripts/run_benchmark.py --preset standard` a second
+time) to check reproducibility before this README was finalized: every feasibility rate
+and approximation ratio above came back byte-for-byte identical to the first run, since
+each (size, trial) pair is seeded deterministically end to end. Only wall-clock times
+shifted slightly (a few seconds either way), which is expected and reported honestly
+below - it reflects machine load during that particular run, not any non-determinism in
+the solvers themselves.
+
 **Fitted wall-clock scaling exponents** (`log2(time) = intercept + slope * n`):
 
 | Method | slope | slope std. error | R-squared | p-value |
 |---|---|---|---|---|
-| QAOA | -0.054 | 0.044 | 0.44 | 0.34 (not significant) |
-| Brute force | 0.834 | 0.039 | 1.00 | 0.0022 (significant) |
+| QAOA | 0.038 | 0.079 | 0.10 | 0.68 (not significant) |
+| Brute force | 0.945 | 0.068 | 0.99 | 0.0051 (significant) |
 
-A two-sample test on the difference between these two slopes gives t = -15.13,
-p = 0.0001: brute force's runtime is growing measurably with n in this range and QAOA's
+A two-sample test on the difference between these two slopes gives t = -8.72,
+p = 0.00095: brute force's runtime is growing measurably with n in this range and QAOA's
 is not, because in this small-n, noiseless-simulator regime QAOA's cost is dominated by a
 *fixed* classical-optimizer iteration budget, not by circuit size. **Read this
 correctly:** brute force is still far cheaper in absolute terms at every size tested here
 (milliseconds vs. tens of seconds) - the significant result is about the *slope*, not
 about which method is faster today. Pushed out to n = 22 on its own (see the plot below),
-brute force alone already takes about 15 seconds; where the two lines would actually
+brute force alone already takes about 19 seconds; where the two lines would actually
 cross, if ever, on real hardware rather than a laptop simulator, is exactly the open
 question this kind of benchmark exists to characterize, not something this project claims
 to answer.

@@ -105,6 +105,47 @@ hardware token was available in the environment this project was built in.
 
 ## 4. Architecture
 
+### Workflow diagram
+
+The diagram below is the whole project end to end: one config in, four solvers compared,
+statistics fitted across many runs, and everything surfaced on the dashboard. It renders
+directly on GitHub; open this file there (or in any Mermaid-aware viewer) to see it as a
+diagram rather than source text.
+
+```mermaid
+flowchart TD
+    subgraph S1["01-03: Data, preprocessing, EDA"]
+        A["RunConfig: engine, n_assets, budget k,<br/>dates, return_freq, risk_factor"] --> B["01: Adapter fetch<br/>Tiingo -> CoinGecko/yfinance -> Binance/Stooq"]
+        B --> C[("data_cache/: raw prices")]
+        B --> D["02: Preprocessing<br/>drop irrelevant cols, drop 35%+ missing,<br/>impute median/mean/mode"]
+        D --> E["03: EDA<br/>summary stats, correlations,<br/>QAOA-hardness proxy"]
+        E --> F[["mu, Sigma"]]
+    end
+
+    subgraph S2["04-07: Classical and quantum solve"]
+        F --> G["04: Classical formulation<br/>brute force exact + CVXPY relaxation"]
+        F --> H["05: QUBO<br/>qiskit-finance auto-build +<br/>by-hand Ising derivation"]
+        N["10: Fama-French<br/>Ken French factors -> OLS -> mu_FF, Sigma_FF"] -. alternate source .-> H
+        H --> I["06: Quantum solvers<br/>QAOA (Aer, COBYLA) + exact-QUBO control"]
+        G --> J["07: Comparison<br/>4-way result bundle"]
+        I --> J
+    end
+
+    subgraph S3["08-09: Scaling and statistics"]
+        J --> K["08: Multi-seed, multi-size<br/>scaling benchmark"]
+        K --> L["09: Bootstrap CIs, scaling-exponent fit,<br/>paired significance tests"]
+    end
+
+    subgraph S4["Streamlit dashboard"]
+        J --> M["Academic page:<br/>Run and Results / Scaling Benchmark /<br/>Fama-French to Hamiltonian /<br/>Sanity Checks / Portfolio Dynamics"]
+        L --> M
+        N -.-> M
+        P["Portfolio Dashboard page<br/>(Part 2, reserved, blank)"]
+    end
+```
+
+### Repository layout
+
 ```
 qaoa_academic_engine/
   engine/
